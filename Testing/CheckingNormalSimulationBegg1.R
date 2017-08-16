@@ -15,7 +15,7 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10
+Reps = 1000
 
 # k = number of studies in series
 Studies = c(1)
@@ -24,7 +24,7 @@ Studies = c(1)
 Subj = 100
 
 # sd = study level standard deviation
-True.sd = 2
+True.sd = 5
 
 # theta = population level mean
 theta = 0
@@ -82,7 +82,7 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(runif(1, i, 1000))
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
               
               ### Implement Begg and Mazumdar publication bias
               repeat{

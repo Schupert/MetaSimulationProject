@@ -86,7 +86,7 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- i
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
               
               ### Implement Within study multiple outcomes bias
               

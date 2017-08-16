@@ -1,6 +1,5 @@
 #### Libraries
 library(data.table)
-library(metafor)
 
 #### Set working directory - this is a problem with transferring code around computers. 
 ####    Current system works when opened using R project - sets wd to project wd/Results
@@ -18,26 +17,29 @@ set.seed(1234)
 Reps = 10
 
 # k = number of studies in series
-Studies = c(1)
+Studies = c(2,4,6,8,10)
 
 # subj = number of subjects in study, likely to be distributed
 Subj = 100
 
 # sd = study level standard deviation
-True.sd = 2
+True.sd = 5
 
 # theta = population level mean
 theta = 0
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(2)
+tau.sq = c(1,2,3)
 
 # ?need to state I.sq in advance?
 
-# Set up strength of publication bias selection
+# Set up within study reporting bias
 Begg_a <- 1.5
 Begg_b <- 4
 Begg_sided <- 2
+
+Tested.outcomes <- 10
+Chosen.outcomes <- 1
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
@@ -56,7 +58,9 @@ Normal.Simulation <- data.table(
   Study_ID = integer(length = ID),
   Study_estimate = numeric(length = ID),
   Study_sd = numeric(length = ID),
-  Study_n = integer(length = ID)
+  Study_n = integer(length = ID),
+  Study_rejectedMeans = list(length = ID),
+  Study_rejectedSDs = list(length = ID)
 )
 
 ### Simulate
@@ -82,31 +86,39 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(runif(1, i, 1000))
+              Study_patientnumber <- i
               
-              ### Implement Begg and Mazumdar publication bias
-              repeat{
-                
-                Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
-                Study_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = j)
-                Study_mean <- mean(Study_values)
-                Study_StanDev <- sd(Study_values)
-                
-                Begg_weight <-exp(
-                  -Begg_b * (
-                    (Begg_sided * pnorm(-abs(Study_mean)/(Study_StanDev^0.5))) 
-                    ^Begg_a ) 
-                ) 
-                
-                if(rbinom(1,1, Begg_weight) == 1 ){break}
-                
+              ### Implement Within study multiple outcomes bias
+              
+              
+              Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
+              Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Study_mu, sd = j) )
+              #Study_dummy <- rep(1:Tested.outcomes, each = Study)
+              
+              Study_mean <- numeric(length = Tested.outcomes)
+              Study_StanDev <- numeric(length = Tested.outcomes)
+              Begg_p <- numeric(length = Tested.outcomes)
+              
+              for (z in 1:Tested.outcomes) {
+                Study_mean[z] <- mean( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
+                Study_StanDev[z] <- sd( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
+                Begg_p[z] <- pnorm(-abs(Study_mean[z])/(Study_StanDev[z]^0.5))
               }
+              
+              lv <- which.min(Begg_p)
+              
+              
+              
               
               Normal.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
                                                             Study_ID = o, 
-                                                            Study_estimate = Study_mean, Study_sd = Study_StanDev, 
-                                                            Study_n = Study_patientnumber)]
+                                                            Study_estimate = Study_mean[lv], 
+                                                            Study_sd = Study_StanDev[lv], 
+                                                            Study_n = Study_patientnumber,
+                                                            Study_rejectedMeans = list(Study_mean[-lv]),
+                                                            Study_rejectedSDs = list(Study_StanDev[-lv])
+              )]
               
               counter <- counter + 1
             }
@@ -117,11 +129,9 @@ for (i in Subj){
   }
 }
 
-#write.csv(Normal.Simulation, file = "NormalSimulationBegg1.csv")
+#write.csv(Normal.Simulation, file = "NormalSimulationOutcomeBias1.csv")
 
 TimeTaken <- proc.time() - StartTime
-
-## Check distribution of results
 
 hist(Normal.Simulation$Study_estimate)
 mean(Normal.Simulation$Study_estimate)
@@ -131,35 +141,3 @@ hist(Normal.Simulation$Study_sd)
 
 plot(Normal.Simulation$Study_estimate ~ Normal.Simulation$Study_n)
 plot(Normal.Simulation$Study_sd ~ Normal.Simulation$Study_estimate)
-
-testRes <- rma.uni(Study_estimate, Study_sd^2, data=Normal.Simulation, method="FE")
-funnel(testRes)
-
-### Checking Begg weights against sample size
-
-dummy1 <- numeric()
-dummy2 <- numeric()
-
-
-for (a in 10:1000){
-  dummy3 <- numeric()
-  for (b in 1:1000){
-  Study_mu <- rnorm(1, mean = 0, sd = 1)
-  Study_values <- rnorm(a, mean = Study_mu, sd = 2)
-  Study_mean <- mean(Study_values)
-  Study_StanDev <- sd(Study_values)
-  
-  Begg_weight <-exp(
-    -Begg_b * (
-      (Begg_sided * pnorm(-abs(Study_mean)/(Study_StanDev^0.5))) 
-      ^Begg_a ) )
-  dummy3 <- append(dummy3, Begg_weight)
-  }
-  
-  dummy1 <- append(dummy1, a)
-  dummy2 <- append(dummy2, mean(dummy3))
-  
-}
-
-plot(dummy1, dummy2)
- 

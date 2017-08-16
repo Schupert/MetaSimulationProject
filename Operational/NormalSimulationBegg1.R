@@ -1,8 +1,12 @@
 #### Libraries
 library(data.table)
 
-#### Set working directory
-setwd("D:\\Stats\\AFP\\R Code")
+#### Set working directory - this is a problem with transferring code around computers. 
+####    Current system works when opened using R project - sets wd to project wd/Results
+#setwd("D:\\Stats\\AFP\\R Code")
+if (length(regmatches(getwd(), gregexpr("/Results", getwd()))) == 0) 
+{workingDirectory <- paste(getwd(), "/Results", sep = "")}
+if (length(regmatches(workingDirectory, gregexpr("/Results", workingDirectory)))) {setwd(workingDirectory)}
 
 #### set seed for reproduceability
 set.seed(1234)
@@ -22,7 +26,7 @@ Subj = 100
 True.sd = 5
 
 # theta = population level mean
-theta = 120
+theta = 0
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(1,2,3)

@@ -141,7 +141,7 @@ dummy1 <- numeric()
 dummy2 <- numeric()
 
 
-for (a in 10:1000){
+for (a in 10:500){
   dummy3 <- numeric()
   for (b in 1:1000){
   Study_mu <- rnorm(1, mean = 0, sd = 1)
@@ -151,7 +151,7 @@ for (a in 10:1000){
   
   Begg_weight <-exp(
     -Begg_b * (
-      (Begg_sided * pnorm(-abs(Study_mean)/(Study_StanDev^0.5))) 
+      (Begg_sided * dnorm(-abs(Study_mean)/(Study_StanDev))) 
       ^Begg_a ) )
   dummy3 <- append(dummy3, Begg_weight)
   }
@@ -162,4 +162,102 @@ for (a in 10:1000){
 }
 
 plot(dummy1, dummy2)
- 
+
+### Checking Preston weights against sample size
+
+dummy1 <- numeric()
+dummy2 <- numeric()
+
+
+for (a in 10:500){
+  dummy3 <- numeric()
+  for (b in 1:1000){
+    Study_mu <- rnorm(1, mean = 0, sd = 1)
+    Study_values <- rnorm(a, mean = Study_mu, sd = 2)
+    Study_mean <- mean(Study_values)
+    Study_StanDev <- sd(Study_values)
+    
+    Begg_weight <-exp(
+      - Begg_b * Study_StanDev/(sqrt(a)) * (
+        (1- dnorm(-abs(Study_mean)/(Study_StanDev))) 
+        ^2 ) )
+    dummy3 <- append(dummy3, Begg_weight)
+  }
+  
+  dummy1 <- append(dummy1, a)
+  dummy2 <- append(dummy2, mean(dummy3))
+  
+}
+
+plot(dummy1, dummy2)
+
+
+#### Rewritten to plot for p-value and n
+
+dummy1 <- numeric()
+dummy2 <- numeric()
+dummy3 <- numeric()
+
+for (a in 10:1000){
+  for(b in 1:10){
+    Study_mu <- rnorm(1, mean = 0, sd = 1)
+    Study_values <- rnorm(a, mean = Study_mu, sd = 1)
+    Study_mean <- mean(Study_values)
+    Study_StanDev <- sd(Study_values)
+    
+    Begg_weight <-exp(
+      - 30 * Study_StanDev /sqrt(a)  * (
+        (dnorm(-abs(Study_mean)/(Study_StanDev))) 
+        ^1.5 ) )
+    
+  
+  
+  dummy1 <- append(dummy1, a)
+  dummy2 <- append(dummy2, Begg_weight)
+  dummy3 <- append(dummy3, dnorm(-abs(Study_mean)/(Study_StanDev)))
+}
+}
+
+plot(dummy1, dummy2)
+plot(dummy3, dummy2)
+
+asdf <- data.frame(dummy1, dummy2,dummy3)
+with(asdf[asdf$dummy1 < 100,], plot(dummy3, dummy2))
+with(asdf[asdf$dummy3 > 0.1,], plot(dummy1, dummy2))
+
+
+## How Begg weight changes with p-value
+
+dummy1 <- numeric()
+dummy2 <- numeric()
+dummy3 <- numeric()
+for (a in seq(0,1, 0.01) ){
+  for (b in c(1000^(-0.5),600^(-0.5), 200^(-0.5), 100^(-0.5), 50^(-0.5) )){
+    
+  
+  Begg_weight <-exp(
+    - 15  * b* (
+      (a)) 
+      ^1.5 ) 
+  
+  
+  dummy1 <- append(dummy1, a)
+  dummy2 <- append(dummy2, Begg_weight)
+  dummy3 <- append(dummy3, b)
+  
+  }
+}
+
+plot(dummy1, dummy2)
+
+
+### Checking integrals
+
+Begg_weight_fn <- function(p){
+  return(exp(-15*(1000^(-0.5))*p^1.5))
+}
+
+### ?legitimacy of using bound from 0.05 - see Begg and Mazumdar
+integrate(Begg_weight_fn, lower = 0.05, upper = 1)
+
+

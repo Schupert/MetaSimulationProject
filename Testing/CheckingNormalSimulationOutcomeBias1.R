@@ -17,19 +17,19 @@ set.seed(1234)
 Reps = 10
 
 # k = number of studies in series
-Studies = c(2,4,6,8,10)
+Studies = c(1)
 
 # subj = number of subjects in study, likely to be distributed
 Subj = 100
 
 # sd = study level standard deviation
-True.sd = 5
+True.sd = 1
 
 # theta = population level mean
 theta = 0
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(1,2,3)
+tau.sq = c(2)
 
 # ?need to state I.sq in advance?
 

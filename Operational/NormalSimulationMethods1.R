@@ -33,13 +33,8 @@ tau.sq = c(1,2,3)
 
 # ?need to state I.sq in advance?
 
-# Set up within study reporting bias
-Begg_a <- 1.5
-Begg_b <- 4
-Begg_sided <- 2
-
-Tested.outcomes <- 10
-Chosen.outcomes <- 1
+# Size of per unit bias increase
+Bias.multiple <- -0.2
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
@@ -59,8 +54,7 @@ Normal.Simulation <- data.table(
   Study_estimate = numeric(length = ID),
   Study_sd = numeric(length = ID),
   Study_n = integer(length = ID),
-  Study_rejectedMeans = list(length = ID),
-  Study_rejectedSDs = list(length = ID)
+  Study_Number.of.biases = integer(length = ID)
 )
 
 ### Simulate
@@ -88,37 +82,21 @@ for (i in Subj){
               #Statement left in case of varying number of subjects later
               Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
               
-              ### Implement Within study multiple outcomes bias
-              
+              ## Draw from binomial how many methodological concerns study has
+              #for (a in seq(50, 1000, 100)){ print(1/exp(a^0.15))}
+              Number.of.biases <- rbinom(1, 3, 1/(exp(Study_patientnumber^0.15)))
                 
-                Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
-                Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Study_mu, sd = j) )
-                #Study_dummy <- rep(1:Tested.outcomes, each = Study)
-                
-                Study_mean <- numeric(length = Tested.outcomes)
-                Study_StanDev <- numeric(length = Tested.outcomes)
-                Begg_p <- numeric(length = Tested.outcomes)
-                
-                for (z in 1:Tested.outcomes) {
-                  Study_mean[z] <- mean( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
-                  Study_StanDev[z] <- sd( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
-                  Begg_p[z] <- pnorm(-abs(Study_mean)/(Study_StanDev))
-                }
-                
-                lv <- which.min(Begg_p)
-                 
-                
-                
+              Study_mu <- rnorm(1, mean = k + Number.of.biases*Bias.multiple, sd = sqrt(l))
+              Study_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = j)
+              Study_mean <- mean(Study_values)
+              Study_StanDev <- sd(Study_values)
               
               Normal.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
                                                             Study_ID = o, 
-                                                            Study_estimate = Study_mean[lv], 
-                                                            Study_sd = Study_StanDev[lv], 
+                                                            Study_estimate = Study_mean, Study_sd = Study_StanDev, 
                                                             Study_n = Study_patientnumber,
-                                                            Study_rejectedMeans = Study_mean[-lv],
-                                                            Study_rejectedSDs = Study_StanDev[-lv]
-                                                            )]
+                                                            Study_Number.of.biases = Number.of.biases)]
               
               counter <- counter + 1
             }
@@ -129,6 +107,6 @@ for (i in Subj){
   }
 }
 
-#write.csv(Normal.Simulation, file = "NormalSimulationOutcomeBias1.csv")
+write.csv(Normal.Simulation, file = "NormalSimulationMethods1.csv")
 
 TimeTaken <- proc.time() - StartTime

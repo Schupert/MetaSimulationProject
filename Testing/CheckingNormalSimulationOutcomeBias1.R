@@ -1,5 +1,6 @@
 #### Libraries
 library(data.table)
+library(metafor)
 
 #### Set working directory - this is a problem with transferring code around computers. 
 ####    Current system works when opened using R project - sets wd to project wd/Results
@@ -14,7 +15,7 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10
+Reps = 1000
 
 # k = number of studies in series
 Studies = c(1)
@@ -141,3 +142,6 @@ hist(Normal.Simulation$Study_sd)
 
 plot(Normal.Simulation$Study_estimate ~ Normal.Simulation$Study_n)
 plot(Normal.Simulation$Study_sd ~ Normal.Simulation$Study_estimate)
+
+testRes <- rma.uni(Study_estimate, Study_sd^2, data=Normal.Simulation, method="FE")
+funnel(testRes)

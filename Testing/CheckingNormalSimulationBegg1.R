@@ -226,19 +226,19 @@ with(asdf[asdf$dummy1 < 100,], plot(dummy3, dummy2))
 with(asdf[asdf$dummy3 > 0.1,], plot(dummy1, dummy2))
 
 
-## How Begg weight changes with p-value
+## How Begg weight changes with p-value separated by n
 
 dummy1 <- numeric()
 dummy2 <- numeric()
 dummy3 <- numeric()
 for (a in seq(0,1, 0.01) ){
-  for (b in c(1000^(-0.5),600^(-0.5), 200^(-0.5), 100^(-0.5), 50^(-0.5) )){
-    
+  for (b in c(1000,600, 200, 100, 50 , 30)){
+  #for (b in c(1, 0.6, 0.4, 0.3, 0.2, 0.1, 0.05, 0.03, 0.01)){  
   
   Begg_weight <-exp(
-    - 15  * b* (
+    - 3  * (1/log(b))* (
       (a)) 
-      ^1.5 ) 
+      ^0.5 ) 
   
   
   dummy1 <- append(dummy1, a)
@@ -248,16 +248,17 @@ for (a in seq(0,1, 0.01) ){
   }
 }
 
-plot(dummy1, dummy2)
+plot(dummy1, dummy2, ylim = c(0,1))
+abline(v = 0.05)
 
 
 ### Checking integrals
 
 Begg_weight_fn <- function(p){
-  return(exp(-15*(1000^(-0.5))*p^1.5))
+  return(exp(-30*(0.01)*p^1.5))
 }
 
 ### ?legitimacy of using bound from 0.05 - see Begg and Mazumdar
-integrate(Begg_weight_fn, lower = 0.05, upper = 1)
+integrate(Begg_weight_fn, lower = 0.00, upper = 1)
 
 

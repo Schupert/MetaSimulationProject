@@ -93,7 +93,6 @@ for (i in Subj){
                 
                 Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
                 Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Study_mu, sd = j) )
-                #Study_dummy <- rep(1:Tested.outcomes, each = Study)
                 
                 Study_mean <- numeric(length = Tested.outcomes)
                 Study_StanDev <- numeric(length = Tested.outcomes)

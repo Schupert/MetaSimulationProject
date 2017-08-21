@@ -1,11 +1,15 @@
 #### Libraries
 library(data.table)
 
-#### Set working directory
-setwd("D:\\Stats\\AFP\\R Code")
+#### Set working directory - this is a problem with transferring code around computers. 
+####    Current system works when opened using R project - sets wd to project wd/Results
+#setwd("D:\\Stats\\AFP\\R Code")
+if (length(regmatches(getwd(), gregexpr("/Results", getwd()))) == 0) 
+{workingDirectory <- paste(getwd(), "/Results", sep = "")}
+if (length(regmatches(workingDirectory, gregexpr("/Results", workingDirectory)))) {setwd(workingDirectory)}
 
 #### set seed for reproduceability
-set.seed(3456)
+set.seed(1234)
 
 #### Declare variables
 
@@ -13,22 +17,24 @@ set.seed(3456)
 Reps = 1000
 
 # k = number of studies in series
-Studies = c(1)
+Studies = c(2,4,6,8,10)
 
 # subj = number of subjects in study, likely to be distributed
 Subj = 100
 
 # sd = study level standard deviation
-True.sd = 1
+True.sd = 5
 
 # theta = population level mean
 theta = 0
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(2)
+tau.sq = c(1,2,3)
 
 # ?need to state I.sq in advance?
 
+# Boundary of step function on p value, causing severity of publication bias
+Severity.boundary <- c(0.05, 0.2)
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
@@ -72,11 +78,25 @@ for (i in Subj){
             
             for (o in 1:n){
               
+              #Statement left in case of varying number of subjects later
               Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
+              
+              ### Publication bias by step function - currently one sided as per Hedges
+              
+              repeat{
+              
               Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
               Study_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = j)
               Study_mean <- mean(Study_values)
               Study_StanDev <- sd(Study_values)
+              
+              Begg_p <- pnorm(- Study_mean/(Study_StanDev))
+              
+              Step_weight <- ifelse(Begg_p < Severity.boundary[1], 1, ifelse(Begg_p < Severity.boundary[2], 0.75, 0.25))
+              
+              if(rbinom(1,1, Step_weight) == 1 ){break}
+              
+              }
               
               Normal.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
@@ -93,12 +113,6 @@ for (i in Subj){
   }
 }
 
-#write.csv(Normal.Simulation, file = "NormalSimulation1.csv")
+write.csv(Normal.Simulation, file = "NormalSimulationStepBias1.csv")
 
 TimeTaken <- proc.time() - StartTime
-
-hist(Normal.Simulation$Study_estimate)
-mean(Normal.Simulation$Study_estimate)
-sd(Normal.Simulation$Study_estimate)
-mean(Normal.Simulation$Study_sd)
-hist(Normal.Simulation$Study_sd)

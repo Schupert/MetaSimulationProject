@@ -14,7 +14,7 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 1000
+Reps = 10
 
 # k = number of studies in series
 Studies = c(2,4,6,8,10)
@@ -33,11 +33,7 @@ tau.sq = c(1,2,3)
 
 # ?need to state I.sq in advance?
 
-# Set up within study reporting bias
-Begg_a <- 1.5
-Begg_b <- 4
-Begg_sided <- 2
-
+# Set up within study reporting bias - this is now one sided
 Tested.outcomes <- 10
 Chosen.outcomes <- 1
 
@@ -88,11 +84,18 @@ for (i in Subj){
               #Statement left in case of varying number of subjects later
               Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
               
-              ### Implement Within study multiple outcomes bias
+              ### Implement Within study multiple outcomes bias - split variance by simulating values
+              # for each individual which represent the between person variability, then sample from these
+              # with sd to simulate testing variability
               
                 
                 Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
-                Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Study_mu, sd = j) )
+                
+                # Person level 'true' values with half the total sd
+                Person_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = (1/sqrt(2))*j)
+                
+                # Sample multiple outcome measures from same set of patients, using Person_values as mean
+                Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Person_values, sd = (1/sqrt(2))*j) )
                 
                 Study_mean <- numeric(length = Tested.outcomes)
                 Study_StanDev <- numeric(length = Tested.outcomes)
@@ -101,7 +104,7 @@ for (i in Subj){
                 for (z in 1:Tested.outcomes) {
                   Study_mean[z] <- mean( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
                   Study_StanDev[z] <- sd( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
-                  Begg_p[z] <- pnorm(-abs(Study_mean)/(Study_StanDev))
+                  Begg_p[z] <- pnorm(-Study_mean[z]/(Study_StanDev[z]))
                 }
                 
                 lv <- which.min(Begg_p)
@@ -115,8 +118,8 @@ for (i in Subj){
                                                             Study_estimate = Study_mean[lv], 
                                                             Study_sd = Study_StanDev[lv], 
                                                             Study_n = Study_patientnumber,
-                                                            Study_rejectedMeans = Study_mean[-lv],
-                                                            Study_rejectedSDs = Study_StanDev[-lv]
+                                                            Study_rejectedMeans = list(list(Study_mean[-lv])),
+                                                            Study_rejectedSDs = list(list(Study_StanDev[-lv]))
                                                             )]
               
               counter <- counter + 1

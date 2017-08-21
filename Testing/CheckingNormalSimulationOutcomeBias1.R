@@ -39,7 +39,7 @@ Begg_a <- 1.5
 Begg_b <- 4
 Begg_sided <- 2
 
-Tested.outcomes <- 10
+Tested.outcomes <- 1
 Chosen.outcomes <- 1
 
 
@@ -89,12 +89,18 @@ for (i in Subj){
               #Statement left in case of varying number of subjects later
               Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
               
-              ### Implement Within study multiple outcomes bias
+              ### Implement Within study multiple outcomes bias - split variance by simulating values
+              # for each individual which represent the between person variability, then sample from these
+              # with sd to simulate testing variability
               
               
               Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
-              Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Study_mu, sd = j) )
-              #Study_dummy <- rep(1:Tested.outcomes, each = Study)
+              
+              # Person level 'true' values with half the total sd
+              Person_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = (1/sqrt(2))*j)
+              
+              # Sample multiple outcome measures from same set of patients, using Person_values as mean
+              Study_values <- as.vector(replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Person_values, sd = (1/sqrt(2))*j)))
               
               Study_mean <- numeric(length = Tested.outcomes)
               Study_StanDev <- numeric(length = Tested.outcomes)
@@ -103,7 +109,7 @@ for (i in Subj){
               for (z in 1:Tested.outcomes) {
                 Study_mean[z] <- mean( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
                 Study_StanDev[z] <- sd( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
-                Begg_p[z] <- pnorm(-abs(Study_mean[z])/(Study_StanDev[z]^0.5))
+                Begg_p[z] <- pnorm(-Study_mean[z]/(Study_StanDev[z]))
               }
               
               lv <- which.min(Begg_p)
@@ -117,8 +123,8 @@ for (i in Subj){
                                                             Study_estimate = Study_mean[lv], 
                                                             Study_sd = Study_StanDev[lv], 
                                                             Study_n = Study_patientnumber,
-                                                            Study_rejectedMeans = list(Study_mean[-lv]),
-                                                            Study_rejectedSDs = list(Study_StanDev[-lv])
+                                                            Study_rejectedMeans = list(list(Study_mean[-lv])),
+                                                            Study_rejectedSDs = list(list(Study_StanDev[-lv]))
               )]
               
               counter <- counter + 1
@@ -145,3 +151,16 @@ plot(Normal.Simulation$Study_sd ~ Normal.Simulation$Study_estimate)
 
 testRes <- rma.uni(Study_estimate, Study_sd^2, data=Normal.Simulation, method="FE")
 funnel(testRes)
+
+
+#### Problems with list assignment
+Normal.Simulation[Unique_ID == 1000, Study_rejectedSDs := Study_StanDev[-lv]]
+typeof(Normal.Simulation[1000]$Study_rejectedSDs)
+
+DT = data.table(a=1:2, b=list(1:5,1:10))
+DT
+
+
+sapply(DT$b, length)
+typeof(DT$b)
+typeof(DT[1]$b)

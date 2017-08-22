@@ -82,35 +82,35 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
               
               ### Implement Within study multiple outcomes bias - split variance by simulating values
               # for each individual which represent the between person variability, then sample from these
               # with sd to simulate testing variability
               
-                
-                Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
-                
-                # Person level 'true' values with half the total sd
-                Person_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = (1/sqrt(2))*j)
-                
-                # Sample multiple outcome measures from same set of patients, using Person_values as mean
-                Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Person_values, sd = (1/sqrt(2))*j) )
-                
-                Study_mean <- numeric(length = Tested.outcomes)
-                Study_StanDev <- numeric(length = Tested.outcomes)
-                Begg_p <- numeric(length = Tested.outcomes)
-                
-                for (z in 1:Tested.outcomes) {
-                  Study_mean[z] <- mean( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
-                  Study_StanDev[z] <- sd( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
-                  Begg_p[z] <- pnorm(-Study_mean[z]/(Study_StanDev[z]))
-                }
-                
-                lv <- which.min(Begg_p)
-                 
-                
-                
+              
+              Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
+              
+              # Person level 'true' values with half the total sd
+              Person_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = (1/sqrt(2))*j)
+              
+              # Sample multiple outcome measures from same set of patients, using Person_values as mean
+              Study_values <- as.vector(replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Person_values, sd = (1/sqrt(2))*j)))
+              
+              Study_mean <- numeric(length = Tested.outcomes)
+              Study_StanDev <- numeric(length = Tested.outcomes)
+              Begg_p <- numeric(length = Tested.outcomes)
+              
+              for (z in 1:Tested.outcomes) {
+                Study_mean[z] <- mean( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
+                Study_StanDev[z] <- sd( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
+                Begg_p[z] <- pnorm(-Study_mean[z]/(Study_StanDev[z]))
+              }
+              
+              lv <- which.min(Begg_p)
+              
+              
+              
               
               Normal.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
@@ -118,9 +118,9 @@ for (i in Subj){
                                                             Study_estimate = Study_mean[lv], 
                                                             Study_sd = Study_StanDev[lv], 
                                                             Study_n = Study_patientnumber,
-                                                            Study_rejectedMeans = list(list(Study_mean[-lv])),
-                                                            Study_rejectedSDs = list(list(Study_StanDev[-lv]))
-                                                            )]
+                                                            Study_rejectedMeans = list(Study_mean[-lv]),
+                                                            Study_rejectedSDs = list(Study_StanDev[-lv])
+              )]
               
               counter <- counter + 1
             }

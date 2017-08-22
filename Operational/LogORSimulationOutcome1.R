@@ -1,11 +1,12 @@
 #### Libraries
 library(data.table)
+library(metafor)
 
 #### Set working directory - this is a problem with transferring code around computers. 
 ####    Current system works when opened using R project - sets wd to project wd/Results
 #setwd("D:\\Stats\\AFP\\R Code")
 if (lengths(regmatches(getwd(), gregexpr("/Results", getwd()))) == 0) 
-  {workingDirectory <- paste(getwd(), "/Results", sep = "")}
+{workingDirectory <- paste(getwd(), "/Results", sep = "")}
 if (lengths(regmatches(workingDirectory, gregexpr("/Results", workingDirectory)))) {setwd(workingDirectory)}
 
 #### set seed for reproduceability
@@ -35,6 +36,10 @@ tau.sq = c(1,2,3)
 EvFreq = c(0.05, 0.2, 0.5)
 
 # ?need to state I.sq in advance?
+
+# Set up within study reporting bias - this is now one sided
+Tested.outcomes <- 10
+Chosen.outcomes <- 1
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
 ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * length(EvFreq) * Reps * sum(Studies) 
@@ -105,7 +110,9 @@ LogOR.Simulation <- data.table(
   Group2Outcome1 = numeric(length = ID),
   Group2Outcome2 = numeric(length = ID),
   Group1Size = integer(length = ID),
-  Group2Size = integer(length = ID)
+  Group2Size = integer(length = ID),
+  Study_rejectedMeans = list(length = ID),
+  Study_rejectedSDs = list(length = ID)
 )
 
 ### Simulate
@@ -131,22 +138,60 @@ for (i in Subj){
             for (o in 1:n){
               
               for (p in EvFreq){
-              
+                
                 #Statement left in case of varying number of subjects later
                 Study_patientnumber <- round(rlnorm(1, meanlog = 4.6, sdlog = 1))
                 
-                x <- Log_Odds_Ratio(Study_patientnumber, k, l, j, p)
                 
-                LogOR.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_control_proportion = j,
-                                                              Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
-                                                              Study_ID = o, 
-                                                              Study_estimate = log((x[3]/x[4])/(x[1]/x[2])), 
-                                                              Study_sd = 1/x[1] + 1/x[2] + 1/x[3] + 1/x[4], 
-                                                              Study_n = Study_patientnumber,
-                                                              Group1Outcome1 = x[1], Group1Outcome2 = x[2],
-                                                              Group2Outcome1 = x[3], Group2Outcome2 = x[4],
-                                                              Group1Size = x[5], Group2Size = x[6]
-                                                             )]
+                ### Implement Within study multiple outcomes bias - split variance by simulating values
+                # for each individual which represent the between person variability, then sample from these
+                # with sd to simulate testing variability
+                  
+#                   x <- Log_Odds_Ratio(Study_patientnumber, k, l, j, p)
+#                   
+#                   Study_mean <- log((x[3]/x[4])/(x[1]/x[2]))
+#                   Study_StanDev <- 1/x[1] + 1/x[2] + 1/x[3] + 1/x[4]
+#                   
+#                   Begg_p <- pnorm(- Study_mean/(Study_StanDev))
+#                   
+#                   Step_weight <- ifelse(Begg_p < Severity.boundary[1], 1, ifelse(Begg_p < Severity.boundary[2], 0.75, 0.25))
+#                   
+                  
+                  
+                # In the log(OR) condition tau2 variance is split between study level and person level
+                  Study_mu <- rnorm(1, mean = k, sd = sqrt(0.5 * l))
+                  #Person_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = sqrt(0.5*l))
+                  
+                  # Sample multiple outcome measures from same set of patients, using Person_values as mean
+                  #Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Person_values, sd = (1/sqrt(2))*j) )
+                  Study_values <- replicate(Tested.outcomes, Log_Odds_Ratio(Study_patientnumber, Study_mu, 0.5 * l, j, p) )
+                  
+                  Study_mean <- numeric(length = Tested.outcomes)
+                  Study_StanDev <- numeric(length = Tested.outcomes)
+                  Begg_p <- numeric(length = Tested.outcomes)
+                  
+                  for (z in 1:Tested.outcomes) {
+                    Study_mean[z] <- log((Study_values[3,z]/Study_values[4,z])/(Study_values[1,z]/Study_values[2,z]))
+                    Study_StanDev[z] <- sqrt(1/Study_values[1,z] + 1/Study_values[2,z] + 1/Study_values[3,z] + 1/Study_values[4,z])
+                    Begg_p[z] <- pnorm(-Study_mean[z]/(Study_StanDev[z]))
+                  }
+                  
+                  lv <- which.min(Begg_p)
+                  
+                
+                
+                  LogOR.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_control_proportion = j,
+                                                               Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
+                                                               Study_ID = o, 
+                                                               Study_estimate = Study_mean[lv], 
+                                                               Study_sd = Study_StanDev[lv],
+                                                               Study_n = Study_patientnumber,
+                                                               Group1Outcome1 = Study_values[1,lv], Group1Outcome2 = Study_values[2,lv],
+                                                               Group2Outcome1 = Study_values[3,lv], Group2Outcome2 = Study_values[4,lv],
+                                                               Group1Size = Study_values[5,lv], Group2Size = Study_values[6,lv],
+                                                               Study_rejectedMeans = list(Study_mean[-lv]),
+                                                               Study_rejectedSDs = list(Study_StanDev[-lv])
+                )]
                 
                 counter <- counter + 1
               }
@@ -158,6 +203,6 @@ for (i in Subj){
   }
 }
 
-write.csv(LogOR.Simulation, file = "LogORSimulation1.csv")
+write.csv(LogOR.Simulation, file = "LogORSimulationOutcome1.csv")
 
 TimeTaken <- proc.time() - StartTime

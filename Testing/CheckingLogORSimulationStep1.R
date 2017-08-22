@@ -1,13 +1,13 @@
-
-###################################### Pic fixed in this version to be 0.5
-
-rm(list=ls(all=TRUE))
-
 #### Libraries
 library(data.table)
+library(metafor)
 
-#### Set working directory
-setwd("D:\\Stats\\AFP\\R Code")
+#### Set working directory - this is a problem with transferring code around computers. 
+####    Current system works when opened using R project - sets wd to project wd/Results
+#setwd("D:\\Stats\\AFP\\R Code")
+if (lengths(regmatches(getwd(), gregexpr("/Results", getwd()))) == 0) 
+{workingDirectory <- paste(getwd(), "/Results", sep = "")}
+if (lengths(regmatches(workingDirectory, gregexpr("/Results", workingDirectory)))) {setwd(workingDirectory)}
 
 #### set seed for reproduceability
 set.seed(1234)
@@ -15,7 +15,7 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10000
+Reps = 10
 
 # k = number of studies in series
 Studies = c(1)
@@ -27,15 +27,21 @@ Subj = 100
 controlProp = 0.5
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
-theta = c(log(1))
+theta = c( log(1))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(9)
+tau.sq = c(2)
+
+# Frequency of event averaged across 2 arms (before applying change due to theta) = EvFreq
+EvFreq = c(0.5)
 
 # ?need to state I.sq in advance?
 
+# Boundary of step function on p value, causing severity of publication bias
+Severity.boundary <- c(0.05, 0.2)
+
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
-ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * Reps * sum(Studies) 
+ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * length(EvFreq) * Reps * sum(Studies) 
 
 
 ### Function to simulate a single observational study. Control_prop represents the proportion of 
@@ -48,28 +54,7 @@ ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * Reps
 #   StudyLogOR <- rnorm(1, Log_O_R, sqrt(Heterogeneity))
 #   Group1Size <- as.integer(Control_Prop*StudySize)
 #   Group2Size <- as.integer(StudySize - Group1Size)
-#   #Pic <- runif(1, 0.05, 0.65)
-#   Pic <- 0.5
-#   Group1Out1 <- as.integer(rbinom(1, Group1Size, Pic))
-#   Group1Out2 <- as.integer(Group1Size - Group1Out1)
-#   Pit <- (Pic * exp(StudyLogOR))/(1 - Pic + (Pic * exp(StudyLogOR)))
-#   Group2Out1 <- as.integer(rbinom(1, Group2Size, Pit))
-#   Group2Out2 <- as.integer(Group2Size - Group2Out1)
-#   if (Group1Out1 == 0){Group1Out1 <- 0.5}
-#   if (Group2Out1 == 0){Group2Out1 <- 0.5}
-#   if (Group1Out2 == 0){Group1Out2 <- 0.5}
-#   if (Group2Out2 == 0){Group2Out2 <- 0.5}
-#   return(c(Group1Out1, Group1Out2, Group2Out1, Group2Out2, Group1Size, Group2Size))
-# }
-
-### Alternative formulation drawing Pic from a normal distribution with a stated mean and sd, rather than 
-### from uniform distribution. ?Unclear if this is a good assumption
-
-# Log_Odds_Ratio_alt <- function(StudySize, Log_O_R, Heterogeneity, Control_Prop, Av_Pic, Sd_Pic){
-#   StudyLogOR <- rnorm(1, Log_O_R, sqrt(Heterogeneity))
-#   Group1Size <- as.integer(Control_Prop*StudySize)
-#   Group2Size <- as.integer(StudySize - Group1Size)
-#   Pic <- rnorm(Av_Pic, Sd_Pic)
+#   Pic <- runif(1, 0.05, 0.65)
 #   Group1Out1 <- as.integer(rbinom(1, Group1Size, Pic))
 #   Group1Out2 <- as.integer(Group1Size - Group1Out1)
 #   Pit <- (Pic * exp(StudyLogOR))/(1 - Pic + (Pic * exp(StudyLogOR)))
@@ -149,24 +134,42 @@ for (i in Subj){
             
             for (o in 1:n){
               
-              #Statement left in case of varying number of subjects later
-              Study_patientnumber <- i
-              
-              # Currently using alternative formulation with extra mu
-              x <- Log_Odds_Ratio(Study_patientnumber, k, l, j, mu= 0.5)
-              
-              LogOR.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_control_proportion = j,
-                                                           Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
-                                                           Study_ID = o, 
-                                                           Study_estimate = log((x[3]/x[4])/(x[1]/x[2])), 
-                                                           Study_sd = 1/x[1] + 1/x[2] + 1/x[3] + 1/x[4], 
-                                                           Study_n = Study_patientnumber,
-                                                           Group1Outcome1 = x[1], Group1Outcome2 = x[2],
-                                                           Group2Outcome1 = x[3], Group2Outcome2 = x[4],
-                                                           Group1Size = x[5], Group2Size = x[6]
-              )]
-              
-              counter <- counter + 1
+              for (p in EvFreq){
+                
+                #Statement left in case of varying number of subjects later
+                Study_patientnumber <- round(rlnorm(1, meanlog = 4.6, sdlog = 1))
+                
+                
+                ### Publication bias by step function - currently one sided as per Hedges
+                
+                repeat{
+                  
+                  x <- Log_Odds_Ratio(Study_patientnumber, k, l, j, p)
+                  
+                  Study_mean <- log((x[3]/x[4])/(x[1]/x[2]))
+                  Study_StanDev <- 1/x[1] + 1/x[2] + 1/x[3] + 1/x[4]
+                  
+                  Begg_p <- pnorm(- Study_mean/(Study_StanDev))
+                  
+                  Step_weight <- ifelse(Begg_p < Severity.boundary[1], 1, ifelse(Begg_p < Severity.boundary[2], 0.75, 0.25))
+                  
+                  if(rbinom(1,1, Step_weight) == 1 ){break}
+                  
+                }
+                
+                LogOR.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_control_proportion = j,
+                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
+                                                             Study_ID = o, 
+                                                             Study_estimate = Study_mean, 
+                                                             Study_sd = Study_StanDev, 
+                                                             Study_n = Study_patientnumber,
+                                                             Group1Outcome1 = x[1], Group1Outcome2 = x[2],
+                                                             Group2Outcome1 = x[3], Group2Outcome2 = x[4],
+                                                             Group1Size = x[5], Group2Size = x[6]
+                )]
+                
+                counter <- counter + 1
+              }
             }
           }
         }
@@ -175,12 +178,20 @@ for (i in Subj){
   }
 }
 
-#write.csv(LogOR.Simulation, file = "LogORSimulation1.csv")
+#write.csv(LogOR.Simulation, file = "LogORSimulationStep1.csv")
 
 TimeTaken <- proc.time() - StartTime
+
+## Check distribution of results
 
 hist(LogOR.Simulation$Study_estimate)
 mean(LogOR.Simulation$Study_estimate)
 sd(LogOR.Simulation$Study_estimate)
 mean(LogOR.Simulation$Study_sd)
 hist(LogOR.Simulation$Study_sd)
+
+plot(LogOR.Simulation$Study_estimate ~ LogOR.Simulation$Study_n)
+plot(LogOR.Simulation$Study_sd ~ LogOR.Simulation$Study_estimate)
+
+testRes <- rma.uni(Study_estimate, Study_sd^2, data=LogOR.Simulation, method="FE")
+funnel(testRes)

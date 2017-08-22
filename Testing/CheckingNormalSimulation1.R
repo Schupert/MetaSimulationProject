@@ -72,7 +72,7 @@ for (i in Subj){
             
             for (o in 1:n){
               
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
               Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
               Study_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = j)
               Study_mean <- mean(Study_values)

@@ -1,3 +1,6 @@
+## Remove variables
+rm(list = ls())
+
 #### Libraries
 library(data.table)
 
@@ -80,7 +83,7 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
               
               ## Draw from binomial how many methodological concerns study has
               #for (a in seq(50, 1000, 100)){ print(1/exp(a^0.15))}

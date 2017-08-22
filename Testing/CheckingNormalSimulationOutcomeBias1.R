@@ -1,3 +1,6 @@
+## Remove variables
+rm(list = ls())
+
 #### Libraries
 library(data.table)
 library(metafor)
@@ -34,12 +37,7 @@ tau.sq = c(2)
 
 # ?need to state I.sq in advance?
 
-# Set up within study reporting bias
-Begg_a <- 1.5
-Begg_b <- 4
-Begg_sided <- 2
-
-Tested.outcomes <- 1
+Tested.outcomes <- 5
 Chosen.outcomes <- 1
 
 
@@ -87,7 +85,7 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
               
               ### Implement Within study multiple outcomes bias - split variance by simulating values
               # for each individual which represent the between person variability, then sample from these
@@ -123,8 +121,8 @@ for (i in Subj){
                                                             Study_estimate = Study_mean[lv], 
                                                             Study_sd = Study_StanDev[lv], 
                                                             Study_n = Study_patientnumber,
-                                                            Study_rejectedMeans = list(list(Study_mean[-lv])),
-                                                            Study_rejectedSDs = list(list(Study_StanDev[-lv]))
+                                                            Study_rejectedMeans = list(Study_mean[-lv]),
+                                                            Study_rejectedSDs = list(Study_StanDev[-lv])
               )]
               
               counter <- counter + 1

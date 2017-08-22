@@ -36,7 +36,7 @@ tau.sq = c(1,2,3)
 # Set up strength of publication bias selection
 Begg_a <- 1.5
 Begg_b <- 4
-Begg_sided <- 2
+Begg_sided <- 1
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
@@ -81,7 +81,7 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- i
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
               
               ### Implement Begg and Mazumdar publication bias
               repeat{
@@ -94,7 +94,7 @@ for (i in Subj){
               # Study mean changed to absolute - not described in paper
               Begg_weight <-exp(
                 -Begg_b * (
-                  (Begg_sided * pnorm(-abs(Study_mean)/(Study_StanDev))) 
+                  (Begg_sided * pnorm(- Study_mean/(Study_StanDev))) 
                   ^Begg_a ) 
                 ) 
               

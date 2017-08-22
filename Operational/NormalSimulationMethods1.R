@@ -80,10 +80,9 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1))
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
               
               ## Draw from binomial how many methodological concerns study has
-              #for (a in seq(50, 1000, 100)){ print(1/exp(a^0.15))}
               Number.of.biases <- rbinom(1, 3, 1/(exp(Study_patientnumber^0.15)))
                 
               Study_mu <- rnorm(1, mean = k + Number.of.biases*Bias.multiple, sd = sqrt(l))

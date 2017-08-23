@@ -17,7 +17,7 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10
+Reps = 100
 
 # k = number of studies in series
 Studies = c(2,4,6,8,10)

@@ -50,7 +50,7 @@ for (a in seq(0,1, 0.01) ){
     #for (b in c(1, 0.6, 0.4, 0.3, 0.2, 0.1, 0.05, 0.03, 0.01)){  
     
     #Begg_weight <- 0.6 *  (1 - (1/ (b^0.5) * (a )  ))   + 0.4 / (1 +  (a / 0.07)^10)
-    Begg_weight <- 0.5 *(1 - (1/ ( sqrt(b))  ))  +  0.5 / ( 1 + exp(- 100 * -(a-0.06) )) ^ (1/1)
+    Begg_weight <- 0.5 *(1 - (1/ ( b ^0.2) *sqrt(a) ))  +  0.5 / ( 1 + exp(- 100 * -(a-0.06) )) ^ (1/1)
     
     dummy1 <- append(dummy1, a)
     dummy2 <- append(dummy2, Begg_weight)
@@ -62,4 +62,19 @@ for (a in seq(0,1, 0.01) ){
 plot(dummy1, dummy2, ylim = c(0,1))
 abline(v = 0.05)
 
-plot(dummy1, dummy2)
+### likelihood of getting bias based on sample size
+
+dummy1 <- numeric()
+dummy2 <- numeric()
+
+for (a in seq(0,1000, 1)){
+  Weight2 <- 1/(exp(a^0.15))
+  
+  dummy1 <- append(dummy1, a)
+  dummy2 <- append(dummy2, Weight2)
+  
+}
+
+plot(dummy1, dummy2, ylim = c(0,1))
+
+mean(dummy2)

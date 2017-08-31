@@ -15,7 +15,7 @@ setkey(Normal.Simulation, "Rep_Number", "Rep_Subj", "Rep_sd", "Rep_theta", "Rep_
 
 #### Declare variables
 # Reps = number of repetitions of experiment
-Reps = 1000
+Reps = 100
 # k = number of studies in series
 Studies = c(2,4,6,8,10)
 # subj = number of subjects in study, likely to be distributed
@@ -27,13 +27,17 @@ theta = c(0,5)
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(1,2,3)
 
+# Number of cores for parallel
+num.Cores <- detectCores() - 1
+c1 <- makeCluster(num.Cores)
+
 ####### Normal simulation analysis with no bias
 
 registerDoParallel(c1)
 
 r <- foreach (m = 1:Reps, 
-              .combine=rbind, .packages = c("data.table"), 
-              .export = c("Studies", "Subj", "controlProp", "theta", "tau.sq", "True.sd", "Normal.Simulation")
+              .combine=rbind, .packages = c("data.table", "metafor"), 
+              .export = c("Studies", "Subj", "theta", "tau.sq", "True.sd", "Normal.Simulation")
 ) %dopar% {
   
   ID.this.loop <- integer()
@@ -52,7 +56,7 @@ r <- foreach (m = 1:Reps,
                                           (match(j, True.sd)-1) * length(theta) * length(tau.sq) * length(Studies) * Reps +
                                           (match(k, theta)-1) * length(tau.sq) * length(Studies) * Reps +
                                           (match(l, tau.sq)-1) * length(Studies) * Reps +
-                                          (match(n, Studies)-1) * Reps +
+                                          (match(n, Studies)-1) * Reps + 
                                           m
             )
             
@@ -97,15 +101,30 @@ r <- foreach (m = 1:Reps,
             ### Temporary data.table
             temp.data <- Normal.Simulation[J(m, i, j, k, l, n)]
             
-            ma.fe <- rma.uni(yi = temp.data$Study_estimate, vi = temp.data$Rep_sd^2, method = "FE")
             
-            ma.reml <- rma.uni(yi = temp.data$Study_estimate, vi = temp.data$Rep_sd^2, method = "REML")
+            ## Counter without number of studies
+            counter <- as.integer((match(i, Subj)-1) * length(True.sd) * length(theta) * length(tau.sq) * length(Studies) * Reps + 
+                                    (match(j, True.sd)-1) * length(theta) * length(tau.sq) * length(Studies) * Reps +
+                                    (match(k, theta)-1) * length(tau.sq) * length(Studies) * Reps +
+                                    (match(l, tau.sq)-1) * length(Studies) * Reps +
+                                    (match(n, Studies)-1) * Reps + 
+                                    m
+            )
+            
+            dummy.escalc <- escalc(measure = "MN", mi = temp.data$Study_estimate, sdi = temp.data$Rep_sd, ni = temp.data$Study_n)
+            
+            ma.fe <- rma.uni(yi, vi , data = dummy.escalc, method = "FE")
+            
+            ma.reml <- rma.uni(yi, vi , data = dummy.escalc, method = "REML")
             
             Normal.Sim.Results[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
                                                           Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
                                                           FE_Estimate = ma.fe[1],
                                                           FE_Est_Low_CI = ma.fe[5],
                                                           FE_Est_Up_CI = ma.fe[6],
+                                                          REML_Estimate = ma.reml[1],
+                                                          REML_Est_Low_CI = ma.reml[5],
+                                                          REML_Est_Up_CI = ma.reml[6],
                                                           REML_tau2 = ma.reml[8],
                                                           REML_I2 = ma.reml[22])]
             
@@ -116,4 +135,21 @@ r <- foreach (m = 1:Reps,
   }
   Normal.Sim.Results
 }
-            
+
+#write.csv(r, file = "NormalSimulation1Analysis.csv")
+
+stopCluster(c1)
+
+mean(r[Rep_tau.sq == 1]$REML_tau2)
+mean(r[Rep_tau.sq == 3 & Rep_NumStudies == 10]$REML_tau2)
+hist(r[Rep_tau.sq == 1]$REML_tau2)
+
+setkey(r, "Rep_Number", "Rep_Subj", "Rep_sd", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
+r[Rep_Subj == 3.5 & Rep_sd == 2 & Rep_theta == 0 & Rep_tau.sq ==3 & Rep_NumStudies == 2, mean(REML_tau2) ]
+
+
+asdf2 <- escalc(measure = "MN", mi = temp.data$Study_estimate, sdi = temp.data$Rep_sd, ni = temp.data$Study_n)
+ma.reml2 <- rma.uni(yi, vi, data = asdf2, method = "REML")
+ma.reml <- rma.uni(yi = temp.data$Study_estimate, vi = temp.data$Rep_sd^2, method = "REML")
+
+system.time(dummy.escalc <- escalc(measure = "MN", mi = temp.data$Study_estimate, sdi = temp.data$Rep_sd, ni = temp.data$Study_n))

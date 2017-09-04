@@ -1,3 +1,5 @@
+rm(list=ls(all=TRUE))
+
 #### Libraries
 library(data.table)
 library(metafor)
@@ -24,7 +26,7 @@ Studies = c(1)
 Subj = 100
 
 # sd = study level standard deviation
-True.sd = 5
+True.sd = 2
 
 # theta = population level mean
 theta = 0
@@ -32,16 +34,32 @@ theta = 0
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(2)
 
+# controlProp = proportion of total sample in control arm
+controlProp = 0.5
+
 # ?need to state I.sq in advance?
 
 # Set up strength of publication bias selection
 Begg_a <- 1.5
 Begg_b <- 4
-Begg_sided <- 2
+Begg_sided <- 1
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
 ID =  length(Subj) * length(True.sd) * length(theta) * length(tau.sq) * Reps * sum(Studies) 
+
+#### Function for UMD
+
+UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
+  StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
+  Group1Size <- as.integer(Control_Prop*StudySize)
+  Group2Size <- as.integer(StudySize - Group1Size)
+  ControlGroup <- rnorm(Group1Size, 0, sd)
+  TreatmentGroup <- rnorm(Group2Size, StudyUMD, sd)
+  Studymean <- mean(TreatmentGroup) - mean(ControlGroup)
+  Studysd <- sqrt( var(ControlGroup)/Group1Size + var(TreatmentGroup)/Group2Size )
+  return(c(Studymean, Studysd))
+}
 
 ### Set up data.table to store results
 
@@ -82,19 +100,18 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+4)
               
               ### Implement Begg and Mazumdar publication bias
               repeat{
                 
-                Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
-                Study_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = j)
-                Study_mean <- mean(Study_values)
-                Study_StanDev <- sd(Study_values)
+                Study_summary <- UMD(Study_patientnumber, k, l, controlProp, True.sd)
+                Study_mean <- Study_summary[1]
+                Study_StanDev <- Study_summary[2]
                 
                 Begg_weight <-exp(
                   -Begg_b * (
-                    (Begg_sided * pnorm(-abs(Study_mean)/(Study_StanDev^0.5))) 
+                    (Begg_sided * pnorm(- Study_mean/(Study_StanDev))) 
                     ^Begg_a ) 
                 ) 
                 
@@ -205,10 +222,13 @@ for (a in 10:1000){
     Study_mean <- mean(Study_values)
     Study_StanDev <- sd(Study_values)
     
-    Begg_weight <-exp(
-      - 30 * Study_StanDev /sqrt(a)  * (
-        (dnorm(-abs(Study_mean)/(Study_StanDev))) 
-        ^1.5 ) )
+#     Begg_weight <-exp(
+#       - 3 * 1/log(a)  * (
+#         (dnorm(-abs(Study_mean)/(Study_StanDev))) 
+#         ^0.5 ) )
+    p.val <- dnorm(-abs(Study_mean)/(Study_StanDev))
+    
+    Begg_weight <- 0.6 *(1 - (1/ ( (a/80) +1)) * (p.val^0.4))  +  0.4 / ( 1 + exp(- 200 * -(p.val - 0.06) )) ^ (1/1)
     
   
   

@@ -10,12 +10,12 @@ library(data.table)
 setwd("D:\\Stats\\AFP\\R Code")
 
 #### set seed for reproduceability
-set.seed(1234)
+#set.seed(1234)
 
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10000
+Reps = 1000
 
 # k = number of studies in series
 Studies = c(1)
@@ -30,7 +30,7 @@ controlProp = 0.5
 theta = c(log(1))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(9)
+tau.sq = c(4)
 
 # ?need to state I.sq in advance?
 
@@ -94,6 +94,28 @@ Log_Odds_Ratio <- function(StudySize, Log_O_R, Heterogeneity, Control_Prop, mu){
   Group1Out2 <- as.integer(Group1Size - Group1Out1)
   Pit <- exp(mu + 0.5*StudyLogOR)  / (1 + exp(mu + 0.5*StudyLogOR))
   Group2Out1 <- as.integer(rbinom(1, Group2Size, Pit))
+  Group2Out2 <- as.integer(Group2Size - Group2Out1)
+  if (Group1Out1 == 0 | Group2Out1 == 0 | Group1Out2 == 0 | Group2Out2 == 0){
+    Group1Out1 <- Group1Out1 + 0.5
+    Group2Out1 <- Group2Out1 + 0.5
+    Group1Out2 <- Group1Out2 + 0.5
+    Group2Out2 <- Group2Out2 + 0.5
+  }
+  return(c(Group1Out1, Group1Out2, Group2Out1, Group2Out2, Group1Size, Group2Size))
+}
+
+Log_Odds_Ratio_var <- function(StudySize, Log_O_R, Heterogeneity, Control_Prop, mu){
+  dummy1 <- rnorm(1, Log_O_R, sqrt(Heterogeneity))
+  Group1Size <- as.integer(Control_Prop*StudySize)
+  Group2Size <- as.integer(StudySize - Group1Size)
+  ### Add individual level variance
+  StudyLogOR1 <- rnorm(Group1Size, dummy1, 2)
+  StudyLogOR2 <- rnorm(Group2Size, dummy1, 2)
+  Pic <- exp(mu - 0.5*StudyLogOR1) / (1 + exp(mu - 0.5*StudyLogOR1))
+  Group1Out1 <- as.integer(sum(rbinom(Group1Size, 1, Pic)))
+  Group1Out2 <- as.integer(Group1Size - Group1Out1)
+  Pit <- exp(mu + 0.5*StudyLogOR2)  / (1 + exp(mu + 0.5*StudyLogOR2))
+  Group2Out1 <- as.integer(sum(rbinom(Group2Size, 1, Pit)))
   Group2Out2 <- as.integer(Group2Size - Group2Out1)
   if (Group1Out1 == 0 | Group2Out1 == 0 | Group1Out2 == 0 | Group2Out2 == 0){
     Group1Out1 <- Group1Out1 + 0.5

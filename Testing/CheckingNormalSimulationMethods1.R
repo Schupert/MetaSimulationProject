@@ -36,12 +36,29 @@ tau.sq = c(2)
 
 # ?need to state I.sq in advance?
 
+# controlProp = proportion of total sample in control arm
+controlProp = 0.5
+
 # Size of per unit bias increase
-Bias.multiple <- -0.2
+Bias.multiple <- 0.2
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
 ID =  length(Subj) * length(True.sd) * length(theta) * length(tau.sq) * Reps * sum(Studies) 
+
+
+#### Function for UMD
+
+UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
+  StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
+  Group1Size <- as.integer(Control_Prop*StudySize)
+  Group2Size <- as.integer(StudySize - Group1Size)
+  ControlGroup <- rnorm(Group1Size, 0, sd)
+  TreatmentGroup <- rnorm(Group2Size, StudyUMD, sd)
+  Studymean <- mean(TreatmentGroup) - mean(ControlGroup)
+  Studysd <- sqrt( var(ControlGroup)/Group1Size + var(TreatmentGroup)/Group2Size )
+  return(c(Studymean, Studysd))
+}
 
 ### Set up data.table to store results
 
@@ -83,16 +100,17 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+4)
               
               ## Draw from binomial how many methodological concerns study has
               #for (a in seq(50, 1000, 100)){ print(1/exp(a^0.15))}
               Number.of.biases <- rbinom(1, 3, 1/(exp(Study_patientnumber^0.15)))
               
-              Study_mu <- rnorm(1, mean = k + Number.of.biases*Bias.multiple, sd = sqrt(l))
-              Study_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = j)
-              Study_mean <- mean(Study_values)
-              Study_StanDev <- sd(Study_values)
+              Number.of.biases <- rbinom(1, 3, 1/(exp(Study_patientnumber^0.15)))
+              
+              Study_summary <- UMD(Study_patientnumber, k + Number.of.biases*Bias.multiple, l, controlProp, True.sd)
+              Study_mean <- Study_summary[1]
+              Study_StanDev <- Study_summary[2]
               
               Normal.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,

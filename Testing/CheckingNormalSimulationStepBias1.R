@@ -1,3 +1,5 @@
+rm(list=ls(all=TRUE))
+
 #### Libraries
 library(data.table)
 library(metafor)
@@ -15,7 +17,7 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10
+Reps = 1000
 
 # k = number of studies in series
 Studies = c(1)
@@ -32,11 +34,26 @@ theta = 0
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(2)
 
+# controlProp = proportion of total sample in control arm
+controlProp = 0.5
+
 # ?need to state I.sq in advance?
 
 # Boundary of step function on p value, causing severity of publication bias
 Severity.boundary <- c(0.05, 0.2)
 
+#### Function for UMD
+
+UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
+  StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
+  Group1Size <- as.integer(Control_Prop*StudySize)
+  Group2Size <- as.integer(StudySize - Group1Size)
+  ControlGroup <- rnorm(Group1Size, 0, sd)
+  TreatmentGroup <- rnorm(Group2Size, StudyUMD, sd)
+  Studymean <- mean(TreatmentGroup) - mean(ControlGroup)
+  Studysd <- sqrt( var(ControlGroup)/Group1Size + var(TreatmentGroup)/Group2Size )
+  return(c(Studymean, Studysd))
+}
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
 ID =  length(Subj) * length(True.sd) * length(theta) * length(tau.sq) * Reps * sum(Studies) 
@@ -81,16 +98,15 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+4)
               
               ### Publication bias by step function - currently one sided as per Hedges
               
               repeat{
                 
-                Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
-                Study_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = j)
-                Study_mean <- mean(Study_values)
-                Study_StanDev <- sd(Study_values)
+                Study_summary <- UMD(Study_patientnumber, k, l, controlProp, True.sd)
+                Study_mean <- Study_summary[1]
+                Study_StanDev <- Study_summary[2]
                 
                 Begg_p <- pnorm(- Study_mean/(Study_StanDev))
                 

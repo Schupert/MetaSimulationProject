@@ -2,7 +2,7 @@
 library(data.table)
 
 #### Set working directory
-setwd("D:\\Stats\\AFP\\R Code")
+#setwd("D:\\Stats\\AFP\\R Code")
 
 #### set seed for reproduceability
 set.seed(3456)
@@ -19,7 +19,7 @@ Studies = c(1)
 Subj = 100
 
 # sd = study level standard deviation
-True.sd = 1
+True.sd = 2
 
 # theta = population level mean
 theta = 0
@@ -27,12 +27,29 @@ theta = 0
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(2)
 
+# controlProp = proportion of total sample in control arm
+controlProp = 0.5
+
 # ?need to state I.sq in advance?
 
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
 ID =  length(Subj) * length(True.sd) * length(theta) * length(tau.sq) * Reps * sum(Studies) 
+
+#### Function for UMD
+
+UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
+  StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
+  Group1Size <- as.integer(Control_Prop*StudySize)
+  Group2Size <- as.integer(StudySize - Group1Size)
+  ControlGroup <- rnorm(Group1Size, 0, sd)
+  TreatmentGroup <- rnorm(Group2Size, StudyUMD, sd)
+  Studymean <- mean(TreatmentGroup) - mean(ControlGroup)
+  Studysd <- sqrt( var(ControlGroup)/Group1Size + var(TreatmentGroup)/Group2Size )
+  return(c(Studymean, Studysd))
+}
+
 
 ### Set up data.table to store results
 
@@ -72,16 +89,14 @@ for (i in Subj){
             
             for (o in 1:n){
               
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
-              Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
-              Study_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = j)
-              Study_mean <- mean(Study_values)
-              Study_StanDev <- sd(Study_values)
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+4)
+              
+              Study_summary <- UMD(Study_patientnumber, k, l, controlProp, j)
               
               Normal.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
                                                             Study_ID = o, 
-                                                            Study_estimate = Study_mean, Study_sd = Study_StanDev, 
+                                                            Study_estimate = Study_summary[1], Study_sd = Study_summary[2], 
                                                             Study_n = Study_patientnumber)]
               
               counter <- counter + 1

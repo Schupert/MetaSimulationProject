@@ -39,6 +39,28 @@ tau.sq = c(2)
 
 Tested.outcomes <- 5
 Chosen.outcomes <- 1
+Sd.split <- 0.5
+
+# controlProp = proportion of total sample in control arm
+controlProp = 0.5
+
+### UMD function with multiple outcome bias with frac being sd in first level, num.times = number of outcomes simulated
+# outputs vectors ordered by p-val
+
+UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd, frac, num.times){
+  StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
+  Group1Size <- as.integer(Control_Prop*StudySize)
+  Group2Size <- as.integer(StudySize - Group1Size)
+  ControlGroup1 <- rnorm(Group1Size, 0, sqrt(frac) * total.sd)
+  TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD, sqrt(frac) * total.sd)
+  ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
+  TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
+  Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
+  Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
+  Begg_p <- pnorm(-Studymean/Studysd)
+  return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
+}
+
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
@@ -85,44 +107,27 @@ for (i in Subj){
             for (o in 1:n){
               
               #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+0.5)
+              Study_patientnumber <- round(rlnorm(1, meanlog = 4.2, sdlog = 1.1)+4)
               
               ### Implement Within study multiple outcomes bias - split variance by simulating values
               # for each individual which represent the between person variability, then sample from these
               # with sd to simulate testing variability
               
               
-              Study_mu <- rnorm(1, mean = k, sd = sqrt(l))
-              
-              # Person level 'true' values with half the total sd
-              Person_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = (1/sqrt(2))*j)
-              
               # Sample multiple outcome measures from same set of patients, using Person_values as mean
-              Study_values <- as.vector(replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Person_values, sd = (1/sqrt(2))*j)))
+              Study_values <- UMD.mult.out(Study_patientnumber, k, l, controlProp, True.sd, Sd.split, Tested.outcomes)
               
-              Study_mean <- numeric(length = Tested.outcomes)
-              Study_StanDev <- numeric(length = Tested.outcomes)
-              Begg_p <- numeric(length = Tested.outcomes)
-              
-              for (z in 1:Tested.outcomes) {
-                Study_mean[z] <- mean( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
-                Study_StanDev[z] <- sd( Study_values[((z-1)*Study_patientnumber + 1): (z*Study_patientnumber)] )
-                Begg_p[z] <- pnorm(-Study_mean[z]/(Study_StanDev[z]))
-              }
-              
-              lv <- which.min(Begg_p)
-              
-              
-              
+              Study_mean <- Study_values[[1]]
+              Study_StanDev <- Study_values[[2]]
               
               Normal.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
                                                             Study_ID = o, 
-                                                            Study_estimate = Study_mean[lv], 
-                                                            Study_sd = Study_StanDev[lv], 
+                                                            Study_estimate = Study_mean[1], 
+                                                            Study_sd = Study_StanDev[1], 
                                                             Study_n = Study_patientnumber,
-                                                            Study_rejectedMeans = list(Study_mean[-lv]),
-                                                            Study_rejectedSDs = list(Study_StanDev[-lv])
+                                                            Study_rejectedMeans = list(Study_mean[-1]),
+                                                            Study_rejectedSDs = list(Study_StanDev[-1])
               )]
               
               counter <- counter + 1

@@ -1,6 +1,3 @@
-
-###################################### Pic fixed in this version to be 0.5
-
 rm(list=ls(all=TRUE))
 
 #### Libraries
@@ -15,7 +12,7 @@ setwd("D:\\Stats\\AFP\\R Code")
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 1000
+Reps = 10000
 
 # k = number of studies in series
 Studies = c(1)
@@ -30,7 +27,7 @@ controlProp = 0.5
 theta = c(log(1))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(4)
+tau.sq = c(2)
 
 # ?need to state I.sq in advance?
 
@@ -109,8 +106,11 @@ Log_Odds_Ratio_var <- function(StudySize, Log_O_R, Heterogeneity, Control_Prop, 
   Group1Size <- as.integer(Control_Prop*StudySize)
   Group2Size <- as.integer(StudySize - Group1Size)
   ### Add individual level variance
-  StudyLogOR1 <- rnorm(Group1Size, dummy1, 2)
-  StudyLogOR2 <- rnorm(Group2Size, dummy1, 2)
+  dummy2 <- rnorm(Group1Size, dummy1, sqrt(0.5)*0.1)
+  dummy3 <- rnorm(Group2Size, dummy1, sqrt(0.5)*0.1)
+  StudyLogOR1 <- rnorm(Group1Size, dummy2, sqrt(0.5)*0.1)
+  StudyLogOR2 <- rnorm(Group2Size, dummy3, sqrt(0.5)*0.1)
+  
   Pic <- exp(mu - 0.5*StudyLogOR1) / (1 + exp(mu - 0.5*StudyLogOR1))
   Group1Out1 <- as.integer(sum(rbinom(Group1Size, 1, Pic)))
   Group1Out2 <- as.integer(Group1Size - Group1Out1)
@@ -175,13 +175,16 @@ for (i in Subj){
               Study_patientnumber <- i
               
               # Currently using alternative formulation with extra mu
-              x <- Log_Odds_Ratio(Study_patientnumber, k, l, j, mu= 0.5)
+              # x <- Log_Odds_Ratio(Study_patientnumber, k, l, j, mu= 0.5)
+              
+              # Checking change in variance with individual level risk
+              x <- Log_Odds_Ratio_var(Study_patientnumber, k, l, j, mu= 0.5)
               
               LogOR.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_control_proportion = j,
                                                            Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
                                                            Study_ID = o, 
                                                            Study_estimate = log((x[3]/x[4])/(x[1]/x[2])), 
-                                                           Study_sd = 1/x[1] + 1/x[2] + 1/x[3] + 1/x[4], 
+                                                           Study_sd = sqrt(1/x[1] + 1/x[2] + 1/x[3] + 1/x[4]), 
                                                            Study_n = Study_patientnumber,
                                                            Group1Outcome1 = x[1], Group1Outcome2 = x[2],
                                                            Group2Outcome1 = x[3], Group2Outcome2 = x[4],
@@ -205,4 +208,5 @@ hist(LogOR.Simulation$Study_estimate)
 mean(LogOR.Simulation$Study_estimate)
 sd(LogOR.Simulation$Study_estimate)
 mean(LogOR.Simulation$Study_sd)
+sd(LogOR.Simulation$Study_sd)
 hist(LogOR.Simulation$Study_sd)

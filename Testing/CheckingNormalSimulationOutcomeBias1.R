@@ -1,3 +1,11 @@
+# 
+#
+#
+#
+#
+#
+# CURRENTLY ALTERED TO HAVE UNORDERED OUTCOME IN UMD to allow estimate of covariance
+
 ## Remove variables
 rm(list = ls())
 
@@ -18,13 +26,13 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 1000
+Reps = 10000
 
 # k = number of studies in series
 Studies = c(1)
 
 # subj = number of subjects in study, likely to be distributed
-Subj = 100
+Subj = 1000
 
 # sd = study level standard deviation
 True.sd = 1
@@ -33,13 +41,13 @@ True.sd = 1
 theta = 0
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(2)
+tau.sq = c(0)
 
 # ?need to state I.sq in advance?
 
-Tested.outcomes <- 5
+Tested.outcomes <- 10
 Chosen.outcomes <- 1
-Sd.split <- 0.5
+Sd.split <- 0.6
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -58,7 +66,9 @@ UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd
   Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
   Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
   Begg_p <- pnorm(-Studymean/Studysd)
-  return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
+  #return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
+  # Unordered whilst checking covariance
+  return(list(Studymean, Studysd))
 }
 
 
@@ -120,14 +130,17 @@ for (i in Subj){
               Study_mean <- Study_values[[1]]
               Study_StanDev <- Study_values[[2]]
               
+              ### Altered to give full list to calculate covariance
+              
               Normal.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
                                                             Study_ID = o, 
                                                             Study_estimate = Study_mean[1], 
                                                             Study_sd = Study_StanDev[1], 
                                                             Study_n = Study_patientnumber,
-                                                            Study_rejectedMeans = list(Study_mean[-1]),
-                                                            Study_rejectedSDs = list(Study_StanDev[-1])
+                                                            #### should be [-1]
+                                                            Study_rejectedMeans = list(Study_mean),
+                                                            Study_rejectedSDs = list(Study_StanDev)
               )]
               
               counter <- counter + 1
@@ -167,3 +180,42 @@ DT
 sapply(DT$b, length)
 typeof(DT$b)
 typeof(DT[1]$b)
+
+#### Testing correlation
+Theta <- 0
+Heterogeneity <- 2
+Control_Prop <- 0.5
+StudySize <- 100000
+frac <- 0.5
+total.sd <- 3
+num.times <- 5
+
+
+StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
+Group1Size <- as.integer(Control_Prop*StudySize)
+Group2Size <- as.integer(StudySize - Group1Size)
+ControlGroup1 <- rnorm(Group1Size, 0, sqrt(frac) * total.sd)
+TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD, sqrt(frac) * total.sd)
+ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
+TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
+Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
+Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
+Begg_p <- pnorm(-Studymean/Studysd)
+
+output <- matrix(unlist(TreatmentGroupAll), ncol = 5)
+cor(output)
+output2 <- matrix(unlist(ControlGroupAll), ncol = 5)
+cor(output2)
+
+### Correlation of total simulation outputs ? wrong set up
+# output <- matrix(unlist(Normal.Simulation$Study_rejectedMeans), ncol = 1000)
+# asdf <- cor(output)
+# mean(asdf[lower.tri(asdf)])
+
+#### Likely correct correlation set up, estimates show equal to first level sd plit = sd.split
+output <- matrix(unlist(Normal.Simulation$Study_rejectedMeans), ncol = Tested.outcomes, byrow = TRUE)
+dim(output)
+asdf <-cov(output)
+mean(asdf[lower.tri(asdf)])
+hist(asdf[lower.tri(asdf)])
+plot(output[,10], output[,9])

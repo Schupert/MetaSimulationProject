@@ -226,7 +226,7 @@ for (a in 10:1000){
 #       - 3 * 1/log(a)  * (
 #         (dnorm(-abs(Study_mean)/(Study_StanDev))) 
 #         ^0.5 ) )
-    p.val <- dnorm(-abs(Study_mean)/(Study_StanDev))
+    p.val <- pnorm(-Study_mean/(Study_StanDev))
     
     Begg_weight <- 0.6 *(1 - (1/ ( (a/80) +1)) * (p.val^0.4))  +  0.4 / ( 1 + exp(- 200 * -(p.val - 0.06) )) ^ (1/1)
     
@@ -234,7 +234,7 @@ for (a in 10:1000){
   
   dummy1 <- append(dummy1, a)
   dummy2 <- append(dummy2, Begg_weight)
-  dummy3 <- append(dummy3, dnorm(-abs(Study_mean)/(Study_StanDev)))
+  dummy3 <- append(dummy3, p.val)
 }
 }
 
@@ -281,4 +281,11 @@ Begg_weight_fn <- function(p){
 ### ?legitimacy of using bound from 0.05 - see Begg and Mazumdar
 integrate(Begg_weight_fn, lower = 0.00, upper = 1)
 
+#### Plot to estimate number of biases
 
+sample.sizes <- rlnorm(100000, 4.2, 1.1)
+bias <- rbinom(100000, 3, (1/sample.sizes^0.1))
+tapply(sample.sizes, bias, summary)
+
+
+rbinom(3, 3, c(0.01, 0.5, 0.99))

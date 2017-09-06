@@ -104,9 +104,7 @@ for (i in Subj){
               
               ## Draw from binomial how many methodological concerns study has
               #for (a in seq(50, 1000, 100)){ print(1/exp(a^0.15))}
-              Number.of.biases <- rbinom(1, 3, 1/(exp(Study_patientnumber^0.15)))
-              
-              Number.of.biases <- rbinom(1, 3, 1/(exp(Study_patientnumber^0.15)))
+              Number.of.biases <- rbinom(1, 3, 1/(Study_patientnumber^0.1))
               
               Study_summary <- UMD(Study_patientnumber, k + Number.of.biases*Bias.multiple, l, controlProp, True.sd)
               Study_mean <- Study_summary[1]

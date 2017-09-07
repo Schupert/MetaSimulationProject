@@ -82,3 +82,9 @@ plot(dummy1, dummy2, ylim = c(0,1))
 abline (h = 0.5)
 
 mean(dummy2)
+
+
+### Empirical distributions
+
+qlnorm(c(0.25, 0.5, 0.75), 4.2, 1.1)
+qlnorm(c(0.25, 0.5, 0.75), 4.7, 1.2)

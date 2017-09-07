@@ -11,21 +11,29 @@ library(metafor)
 
 Normal.Simulation <- read.csv("NormalSimulation1.csv")
 Normal.Simulation <- data.table(Normal.Simulation)
-setkey(Normal.Simulation, "Rep_Number", "Rep_Subj", "Rep_sd", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
+setkey(Normal.Simulation, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
 
-#### Declare variables
 # Reps = number of repetitions of experiment
 Reps = 100
+
 # k = number of studies in series
-Studies = c(2,4,6,8,10)
+Studies = c(3,5,10,30,50,100)
+
 # subj = number of subjects in study, likely to be distributed
-Subj = c(3.5, 4)
+#Subj <- list(1, c(30,50), c(210, 1000), c(4.2, 1.1))
+Subj <- list(1,2,3,4)
+
 # sd = study level standard deviation
-True.sd = c(2,3)
-# theta = population level mean
-theta = c(0,5)
+True.sd = 2
+
+# theta = population level mean - need good sense of range for SMD
+theta = c(-0.5, 0, 0.5, 1)
+
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(1,2,3)
+
+# controlProp = proportion of total sample in control arm
+controlProp = 0.5
 
 # Number of cores for parallel
 num.Cores <- detectCores() - 1
@@ -44,25 +52,20 @@ r <- foreach (m = 1:Reps,
   
   for (i in Subj){
     
-    for (j in True.sd){
+    for (k in theta){
       
-      for (k in theta){
+      for (l in tau.sq){
         
-        for (l in tau.sq){
+        for (n in Studies){
           
-          for (n in Studies){
-            
-            new.this.loop <- as.integer((match(i, Subj)-1) * length(True.sd) * length(theta) * length(tau.sq) * length(Studies) * Reps + 
-                                          (match(j, True.sd)-1) * length(theta) * length(tau.sq) * length(Studies) * Reps +
-                                          (match(k, theta)-1) * length(tau.sq) * length(Studies) * Reps +
-                                          (match(l, tau.sq)-1) * length(Studies) * Reps +
-                                          (match(n, Studies)-1) * Reps + 
-                                          m
-            )
-            
-            ID.this.loop <- append(ID.this.loop, new.this.loop)
-            
-          }
+          new.this.loop <- as.integer((match(i, Subj)-1) * length(theta) * length(tau.sq) * length(Studies) * Reps + 
+                                        (match(k, theta)-1) * length(tau.sq) * length(Studies) * Reps +
+                                        (match(l, tau.sq)-1) * length(Studies) * Reps +
+                                        (match(n, Studies)-1) * Reps + 
+                                        m
+          )
+          ID.this.loop <- append(ID.this.loop, new.this.loop)
+          
         }
       }
     }
@@ -74,7 +77,6 @@ r <- foreach (m = 1:Reps,
     Unique_ID = c(ID.this.loop),
     Rep_Number = integer(length = ID),
     Rep_Subj = numeric(length = ID),
-    Rep_sd = numeric(length = ID),
     Rep_theta = numeric(length = ID),
     Rep_tau.sq = numeric(length = ID),
     Rep_NumStudies = numeric(length = ID),
@@ -90,45 +92,44 @@ r <- foreach (m = 1:Reps,
   
   for (i in Subj){
     
-    for (j in True.sd){
+    for (k in theta){
       
-      for (k in theta){
+      for (l in tau.sq){
         
-        for (l in tau.sq){
+        for (n in Studies){
           
-          for (n in Studies){
-            
-            ### Temporary data.table
-            temp.data <- Normal.Simulation[J(m, i, j, k, l, n)]
-            
-            
-            ## Counter without number of studies
-            counter <- as.integer((match(i, Subj)-1) * length(True.sd) * length(theta) * length(tau.sq) * length(Studies) * Reps + 
-                                    (match(j, True.sd)-1) * length(theta) * length(tau.sq) * length(Studies) * Reps +
-                                    (match(k, theta)-1) * length(tau.sq) * length(Studies) * Reps +
-                                    (match(l, tau.sq)-1) * length(Studies) * Reps +
-                                    (match(n, Studies)-1) * Reps + 
-                                    m
-            )
-            
-            dummy.escalc <- escalc(measure = "MN", mi = temp.data$Study_estimate, sdi = temp.data$Rep_sd, ni = temp.data$Study_n)
-            
-            ma.fe <- rma.uni(yi, vi , data = dummy.escalc, method = "FE")
-            
-            ma.reml <- rma.uni(yi, vi , data = dummy.escalc, method = "REML")
-            
-            Normal.Sim.Results[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_sd = j,
-                                                          Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
-                                                          FE_Estimate = ma.fe[1],
-                                                          FE_Est_Low_CI = ma.fe[5],
-                                                          FE_Est_Up_CI = ma.fe[6],
-                                                          REML_Estimate = ma.reml[1],
-                                                          REML_Est_Low_CI = ma.reml[5],
-                                                          REML_Est_Up_CI = ma.reml[6],
-                                                          REML_tau2 = ma.reml[8],
-                                                          REML_I2 = ma.reml[22])]
-            
-          }
+          ### Temporary data.table
+          temp.data <- Normal.Simulation[J(m, i, k, l, n)]
+          
+          
+          ## Counter without number of studies
+          counter <- as.integer((match(i, Subj)-1) * length(theta) * length(tau.sq) * length(Studies) * Reps + 
+                                  (match(k, theta)-1) * length(tau.sq) * length(Studies) * Reps +
+                                  (match(l, tau.sq)-1) * length(Studies) * Reps +
+                                  (match(n, Studies)-1) * Reps + 
+                                  m
+          )
+          
+          #dummy.escalc <- escalc(measure = "MN", mi = temp.data$Study_estimate, sdi = temp.data$Rep_sd, ni = temp.data$Study_n)
+          
+          #ma.fe <- rma.uni(yi, vi , data = dummy.escalc, method = "FE")
+          
+          #ma.reml <- rma.uni(yi, vi , data = dummy.escalc, method = "REML")
+          
+          ma.fe <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd , method = "FE")
+          ma.reml <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "REML")
+          
+          Normal.Sim.Results[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, 
+                                                         Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
+                                                         FE_Estimate = ma.fe[[1]],
+                                                         FE_Est_Low_CI = ma.fe[[5]],
+                                                         FE_Est_Up_CI = ma.fe[[6]],
+                                                         REML_Estimate = ma.reml[[1]],
+                                                         REML_Est_Low_CI = ma.reml[[5]],
+                                                         REML_Est_Up_CI = ma.reml[[6]],
+                                                         REML_tau2 = ma.reml[[8]],
+                                                         REML_I2 = ma.reml[[22]])]
+          
         }
       }
     }
@@ -136,7 +137,7 @@ r <- foreach (m = 1:Reps,
   Normal.Sim.Results
 }
 
-#write.csv(r, file = "NormalSimulation1Analysis.csv")
+write.csv(r, file = "NormalSimulation1Analysis.csv")
 
 stopCluster(c1)
 
@@ -144,8 +145,8 @@ mean(r[Rep_tau.sq == 1]$REML_tau2)
 mean(r[Rep_tau.sq == 3 & Rep_NumStudies == 10]$REML_tau2)
 hist(r[Rep_tau.sq == 1]$REML_tau2)
 
-setkey(r, "Rep_Number", "Rep_Subj", "Rep_sd", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
-r[Rep_Subj == 3.5 & Rep_sd == 2 & Rep_theta == 0 & Rep_tau.sq ==3 & Rep_NumStudies == 2, mean(REML_tau2) ]
+setkey(r, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
+r[Rep_Subj == 3 & Rep_theta == 0 & Rep_tau.sq ==3 & Rep_NumStudies == 100, mean(REML_tau2) ]
 
 
 asdf2 <- escalc(measure = "MN", mi = temp.data$Study_estimate, sdi = temp.data$Rep_sd, ni = temp.data$Study_n)

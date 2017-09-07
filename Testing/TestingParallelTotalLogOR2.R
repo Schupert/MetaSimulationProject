@@ -24,25 +24,25 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 100
+Reps = 1
 
 # k = number of studies in series
-Studies = c(2,4,6,8,10)
+Studies = c(3,5,10,30,50,100)
 
 # subj = number of subjects in study, likely to be distributed
-Subj = 100
+Subj <- list(as.integer(c(100,100)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.7, 1.2)))
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
-theta = c(log(2), log(1))
+theta = c(log(0.5), log(1), log(1.5), log(3))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(1,2,3)
 
 # Frequency of event averaged across 2 arms (before applying change due to theta) = EvFreq
-EvFreq = c(0.05, 0.2, 0.5)
+EvFreq = c(0.1, 0.3, 0.5)
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
 ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * length(EvFreq) * Reps * sum(Studies) 
@@ -91,7 +91,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              new.this.loop <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              new.this.loop <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                             (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -142,7 +142,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              counter <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                       (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -150,8 +150,12 @@ r <- foreach (m = 1:Reps,
                                       m
               )
               
-              #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              #Select sample size
+              if (is.integer(i) == TRUE){
+                Study_patientnumber <- round(runif(1, i[1], i[2]))
+              } else {
+                Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              }
               
               x <- Log_Odds_Ratio(Study_patientnumber, k, l, controlProp, j)
               
@@ -176,6 +180,7 @@ r <- foreach (m = 1:Reps,
 }
 
 write.csv(r, file = "LogORSimulation1.csv")
+
 
 ## Begg
 registerDoParallel(c1)
@@ -204,7 +209,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              new.this.loop <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              new.this.loop <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                             (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -255,7 +260,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              counter <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                       (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -263,8 +268,12 @@ r <- foreach (m = 1:Reps,
                                       m
               )
               
-              #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              #Select sample size
+              if (is.integer(i) == TRUE){
+                Study_patientnumber <- round(runif(1, i[1], i[2]))
+              } else {
+                Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              }
               
               ### Implement Begg publication bias
               
@@ -333,7 +342,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              new.this.loop <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              new.this.loop <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                             (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -384,7 +393,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              counter <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                       (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -392,8 +401,12 @@ r <- foreach (m = 1:Reps,
                                       m
               )
               
-              #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              #Select sample size
+              if (is.integer(i) == TRUE){
+                Study_patientnumber <- round(runif(1, i[1], i[2]))
+              } else {
+                Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              }
               
               ### Publication bias by step function - currently one sided as per Hedges
               
@@ -460,7 +473,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              new.this.loop <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              new.this.loop <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                             (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -513,7 +526,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              counter <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                       (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -521,8 +534,12 @@ r <- foreach (m = 1:Reps,
                                       m
               )
               
-              #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              #Select sample size
+              if (is.integer(i) == TRUE){
+                Study_patientnumber <- round(runif(1, i[1], i[2]))
+              } else {
+                Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              }
               
               # In the log(OR) condition tau2 variance is split between study level and person level
               Study_mu <- rnorm(1, mean = k, sd = sqrt(0.5 * l))
@@ -571,7 +588,8 @@ r <- foreach (m = 1:Reps,
 df.LogOR.Simulation <- as.data.frame(r)
 df.LogOR.Simulation$Study_rejectedMeans <- vapply(df.LogOR.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
 df.LogOR.Simulation$Study_rejectedSDs <- vapply(df.LogOR.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
-write.csv(df.LogOR.Simulation, file = "NormalSimulationOutcomeBias1.csv")
+write.csv(df.LogOR.Simulation, file = "LogORSimulationOutcomeBias1.csv")
+rm(df.Normal.Simulation)
 
 ## Methods
 
@@ -583,7 +601,7 @@ r <- foreach (m = 1:Reps,
 ) %dorng% {
   
   # Size of per unit bias increase
-  Bias.multiple <- -0.2
+  Bias.multiple <- 1/0.9
   
   ID.this.loop <- integer()
   
@@ -599,7 +617,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              new.this.loop <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              new.this.loop <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                             (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                             (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -651,7 +669,7 @@ r <- foreach (m = 1:Reps,
             
             for (o in 1:n){
               
-              counter <- as.integer((match(i, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+              counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                       (match(j, EvFreq)-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
                                       (match(l, tau.sq)-1) * sum(Studies) * Reps +
@@ -659,15 +677,19 @@ r <- foreach (m = 1:Reps,
                                       m
               )
               
-              #Statement left in case of varying number of subjects later
-              Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              #Select sample size
+              if (is.integer(i) == TRUE){
+                Study_patientnumber <- round(runif(1, i[1], i[2]))
+              } else {
+                Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2))
+              }
               
               ## Draw from binomial how many methodological concerns study has
               #for (a in seq(50, 1000, 100)){ print(1/exp(a^0.15))}
-              Number.of.biases <- rbinom(1, 3, 1/(exp(Study_patientnumber^0.15)))
+              Number.of.biases <- rbinom(1, 3, 1/(Study_patientnumber^0.1))
               
               # Currently using alternative formulation with extra mu
-              x <- Log_Odds_Ratio(Study_patientnumber, k + Number.of.biases*Bias.multiple, l, controlProp, j)
+              x <- Log_Odds_Ratio(Study_patientnumber, k * (Bias.multiple^Number.of.biases), l, controlProp, j)
               
               LogOR.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_ev_freq = j,
                                                            Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,

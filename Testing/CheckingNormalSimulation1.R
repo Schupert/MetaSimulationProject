@@ -10,7 +10,7 @@ set.seed(3456)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 1000
+Reps = 10000
 
 # k = number of studies in series
 Studies = c(1)
@@ -43,8 +43,8 @@ UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
   Group2Size <- as.integer(StudySize - Group1Size)
-  ControlGroup <- rnorm(Group1Size, 0, sd)
-  TreatmentGroup <- rnorm(Group2Size, StudyUMD, sd)
+  ControlGroup <- rnorm(Group1Size, -StudyUMD/2, sd)
+  TreatmentGroup <- rnorm(Group2Size, StudyUMD/2, sd)
   Studymean <- mean(TreatmentGroup) - mean(ControlGroup)
   Studysd <- sqrt( var(ControlGroup)/Group1Size + var(TreatmentGroup)/Group2Size )
   return(c(Studymean, Studysd))

@@ -6,14 +6,17 @@ require(boot)
 require(data.table)
 
 ### Get data and set keyframes
-
+#r <- read.csv("NormalSimulation1Analysis.csv")
+#r <- data.frame(r)
+#setkey(r, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
 
 ###### Select specific set of results
-Working_copy1 <- r[Rep_Subj == 3.5 & Rep_sd == 2 & Rep_theta == 0 & Rep_tau.sq ==3 & Rep_NumStudies == 10]$REML_Estimate
+Working_copy1 <- r[Rep_Subj == 1 & Rep_theta == 1 & Rep_tau.sq ==3 & Rep_NumStudies == 3]$FE_Estimate
 
-Target_MCE <- 0.006
+## Can increase multiplier when have more reps to estimate with up to available data/3
+Target_MCE <- 0.01
 Reps <- 1000
-Mult <- 30
+Mult <- 33
 
 
 bootstrapMCE <- function(data, indices){

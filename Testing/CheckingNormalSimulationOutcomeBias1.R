@@ -59,16 +59,14 @@ UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
   Group2Size <- as.integer(StudySize - Group1Size)
-  ControlGroup1 <- rnorm(Group1Size, 0, sqrt(frac) * total.sd)
-  TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD, sqrt(frac) * total.sd)
+  ControlGroup1 <- rnorm(Group1Size, -StudyUMD/2, sqrt(frac) * total.sd)
+  TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD/2, sqrt(frac) * total.sd)
   ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
   TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
   Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
   Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
   Begg_p <- pnorm(-Studymean/Studysd)
-  #return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
-  # Unordered whilst checking covariance
-  return(list(Studymean, Studysd))
+  return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
 }
 
 

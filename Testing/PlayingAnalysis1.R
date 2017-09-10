@@ -14,7 +14,7 @@ Normal.Simulation <- data.table(Normal.Simulation)
 setkey(Normal.Simulation, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
 
 # Reps = number of repetitions of experiment
-Reps = 100
+Reps = 10
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)

@@ -123,26 +123,26 @@ UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
- ID =  length(Subj) * length(theta) * length(tau.sq) * Reps * sum(Studies)
-
- vector1 <- 1:ID
-
-Normal.Simulation <- data.table(
-   Unique_ID = vector1,
-   Rep_Number = integer(length = ID),
-   Rep_Subj = list(length = ID),
-   Rep_theta = numeric(length = ID),
-   Rep_tau.sq = numeric(length = ID),
-   Rep_NumStudies = numeric(length = ID),
-   Study_ID = integer(length = ID),
-   Study_estimate = numeric(length = ID),
-   Study_sd = numeric(length = ID),
-   Study_n = integer(length = ID),
-   Study_rejectedMeans = list(length = ID),
-   Study_rejectedSDs = list(length = ID),
-   Study_Number.of.biases = integer(length = ID)
-)
- 
+#  ID =  length(Subj) * length(theta) * length(tau.sq) * Reps * sum(Studies)
+# 
+#  vector1 <- 1:ID
+# 
+# Normal.Simulation <- data.table(
+#    Unique_ID = vector1,
+#    Rep_Number = integer(length = ID),
+#    Rep_Subj = list(length = ID),
+#    Rep_theta = numeric(length = ID),
+#    Rep_tau.sq = numeric(length = ID),
+#    Rep_NumStudies = numeric(length = ID),
+#    Study_ID = integer(length = ID),
+#    Study_estimate = numeric(length = ID),
+#    Study_sd = numeric(length = ID),
+#    Study_n = integer(length = ID),
+#    Study_rejectedMeans = list(length = ID),
+#    Study_rejectedSDs = list(length = ID),
+#    Study_Number.of.biases = integer(length = ID)
+# )
+#  
  
  # base.table <- data.table(
  #   Unique_ID = vector1,
@@ -162,23 +162,18 @@ Normal.Simulation <- data.table(
 
 # ID <- 0
 # 
-# base.table <- data.table(
-#   Unique_ID = integer(),
-#   Rep_Number = integer(),
-#   Rep_Subj = list(),
-#   Rep_theta = numeric(),
-#   Rep_tau.sq = numeric(),
-#   Rep_NumStudies = numeric(),
-#   Study_ID = integer(),
-#   Study_estimate = numeric(),
-#   Study_sd = numeric(),
-#   Study_n = integer(),
-#   Study_rejectedMeans = list(),
-#   Study_rejectedSDs = list(),
-#   Study_Number.of.biases = integer()
-# )
+base.table <- data.table(
+  Unique_ID = integer(),
+  Study_ID = integer(),
+  Study_estimate = numeric(),
+  Study_sd = numeric(),
+  Study_n = integer(),
+  Study_rejectedMeans = list(),
+  Study_rejectedSDs = list(),
+  Study_Number.of.biases = integer()
+)
 
-list.of.sample.sizes <- c(round(runif(ID/4, 30, 40)), rep(60, times = ID/4), round(runif(ID/4, 250, 1000)), round(rlnorm(ID/4, meanlog = 4.2, sdlog = 1.1) + 4) )
+#list.of.sample.sizes <- c(round(runif(ID/4, 30, 40)), rep(60, times = ID/4), round(runif(ID/4, 250, 1000)), round(rlnorm(ID/4, meanlog = 4.2, sdlog = 1.1) + 4) )
 
 StartTime <- proc.time()
 
@@ -187,6 +182,26 @@ StartTime <- proc.time()
 for (i in Subj){
   
   for (k in theta){
+    
+    ID = length(tau.sq) * Reps * sum(Studies)
+    
+    Normal.Simulation <- data.table(
+      Unique_ID = integer(length = ID),
+      # Rep_Number = integer(length = ID),
+      # Rep_Subj = list(length = ID),
+      # Rep_theta = numeric(length = ID),
+      # Rep_tau.sq = numeric(length = ID),
+      # Rep_NumStudies = numeric(length = ID),
+      # Study_ID = integer(length = ID),
+      Study_estimate = numeric(length = ID),
+      Study_sd = numeric(length = ID),
+      Study_n = integer(length = ID),
+      Study_rejectedMeans = list(length = ID),
+      Study_rejectedSDs = list(length = ID),
+      Study_Number.of.biases = integer(length = ID)
+    )
+    
+    dummy.counter <- 1
     
     for (l in tau.sq){
       
@@ -269,18 +284,35 @@ for (i in Subj){
           #                                               Study_estimate = Study_mean, Study_sd = Study_StanDev,
           #                                               Study_n = Study_patientnumber)]
           
-          Normal.Simulation[counter, `:=` (Study_estimate = Study_mean, Study_sd = Study_StanDev,
+          Normal.Simulation[dummy.counter, `:=` (Unique_ID = counter, Study_estimate = Study_mean, Study_sd = Study_StanDev,
                                            Study_n = Study_patientnumber)]
 
+          dummy.counter <- dummy.counter + 1
           
           }
         #base.table <- rbindlist(list(base.table, Normal.Simulation), use.names = TRUE, fill = TRUE)
           #base.table[Unique_ID == ]
       }
     }
-  }
+    }
+    base.table <- rbindlist(list(base.table, Normal.Simulation), use.names = TRUE, fill = TRUE)
 }
 
 }
+
+#### Need to then sort final table and add values for rep number, rep subj, rep theta, rep tau2, rep numstudies
+base.table <- base.table[order(Unique_ID)]
+
+ID =  length(Subj) * length(theta) * length(tau.sq) * Reps * sum(Studies)
+base.table$Rep_Number =  rep(1:Reps, times = ID/Reps)
+intermediate <- integer()
+for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
+base.table$Rep_NumStudies= rep(intermediate, times = ID/(Reps*sum(Studies)))
+base.table$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(tau.sq)))
+base.table$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)), times = length(Subj))
+base.table$Rep_Subj = rep(Subj, each = ID / length(Subj))
+#asdf <- data.table(Rep_number, Rep_NumStudies)
 
 TimeTaken <- proc.time() - StartTime
+length(a)
+length(Rep_tau.sq)

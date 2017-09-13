@@ -18,10 +18,10 @@ Reps = 10
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
+#Studies = c(3,5,10,30)
 
 # subj = number of subjects in study, likely to be distributed
-#Subj <- list(1, c(30,50), c(210, 1000), c(4.2, 1.1))
-Subj <- list(1,2,3,4)
+Subj <- list(as.integer(c(60,60)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.2, 1.1)))
 
 # sd = study level standard deviation
 True.sd = 2
@@ -34,6 +34,22 @@ tau.sq = c(1,2,3)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
+
+## Boundary of step function on p value, causing severity of publication bias
+Severity.boundary <- c(0.05, 0.2)
+
+# Set up strength of publication bias selection IF STILL USING
+Begg_a <- 1.5
+Begg_b <- 4
+Begg_sided <- 1
+
+# Set up within study reporting bias - this is now one sided
+Tested.outcomes <- 10
+Chosen.outcomes <- 1
+Sd.split <- 0.5
+
+# Size of per unit bias increase
+Bias.multiple <- 1/0.9
 
 # Number of cores for parallel
 num.Cores <- detectCores() - 1

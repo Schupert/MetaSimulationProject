@@ -12,6 +12,7 @@ rm(list = ls())
 #### Libraries
 library(data.table)
 library(metafor)
+library(copula)
 
 #### Set working directory - this is a problem with transferring code around computers. 
 ####    Current system works when opened using R project - sets wd to project wd/Results
@@ -21,18 +22,18 @@ if (length(regmatches(getwd(), gregexpr("/Results", getwd()))) == 0)
 if (length(regmatches(workingDirectory, gregexpr("/Results", workingDirectory)))) {setwd(workingDirectory)}
 
 #### set seed for reproduceability
-set.seed(1234)
+#set.seed(1234)
 
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10000
+Reps = 100
 
 # k = number of studies in series
 Studies = c(1)
 
 # subj = number of subjects in study, likely to be distributed
-Subj = 1000
+Subj = 100
 
 # sd = study level standard deviation
 True.sd = 1
@@ -45,9 +46,9 @@ tau.sq = c(0)
 
 # ?need to state I.sq in advance?
 
-Tested.outcomes <- 10
+Tested.outcomes <- 100
 Chosen.outcomes <- 1
-Sd.split <- 0.6
+Sd.split <- 0.9
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -58,13 +59,26 @@ controlProp = 0.5
 UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd, frac, num.times){
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
-  Group2Size <- as.integer(StudySize - Group1Size)
-  ControlGroup1 <- rnorm(Group1Size, -StudyUMD/2, sqrt(frac) * total.sd)
-  TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD/2, sqrt(frac) * total.sd)
-  ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
-  TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
-  Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
-  Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
+  Group2Size <- Group1Size
+  
+  ### This isn't working
+  z <- normalCopula(param = frac, dim = Group1Size)
+  Z <- rCopula(num.times, z)
+  ControlGroup <- qnorm(Z, mean = -StudyUMD/2, sd = total.sd)
+  
+  y <- normalCopula(param = frac, dim = Group1Size)
+  Y <- rCopula(num.times, y)
+  TreatmentGroup <- qnorm(Y, mean = StudyUMD/2, sd = total.sd)
+
+  Studymean <- apply(TreatmentGroup,1,mean) - apply(ControlGroup, 1, mean)
+  Studysd <- sqrt( (apply(TreatmentGroup, 1, var) * (Group1Size - 1) + apply(TreatmentGroup, 1, var) * (Group2Size-1))/ (Group1Size + Group2Size -2) )
+    
+#   ControlGroup1 <- rnorm(Group1Size, -StudyUMD/2, sqrt(frac) * total.sd)
+#   TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD/2, sqrt(frac) * total.sd)
+#   ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
+#   TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
+#  Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
+#  Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
   Begg_p <- pnorm(-Studymean/Studysd)
   return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
 }
@@ -213,7 +227,7 @@ cor(output2)
 #### Likely correct correlation set up, estimates show equal to first level sd plit = sd.split
 output <- matrix(unlist(Normal.Simulation$Study_rejectedMeans), ncol = Tested.outcomes, byrow = TRUE)
 dim(output)
-asdf <-cov(output)
+asdf <-cor(output)
 mean(asdf[lower.tri(asdf)])
 hist(asdf[lower.tri(asdf)])
-plot(output[,10], output[,9])
+plot(output[,8], output[,6])

@@ -21,6 +21,7 @@ BRANDO$year <- as.numeric(substrRight(BRANDO$trial_name, 4))
 ##### Excluding study size NAs
 
 BRANDO.2 <- BRANDO[is.na(BRANDO$studysize) == FALSE, ]
+BRANDO.2 <- data.table(BRANDO.2)
 
 summary(BRANDO.2)
 
@@ -28,15 +29,16 @@ ggplot(BRANDO.2, aes(x = sizedecile, y = blind)) + geom_bar()
 ggplot(BRANDO.2, aes(x = log(studysize))) + geom_histogram()
 ggplot(BRANDO.2, aes(x = studysize)) + geom_histogram() + scale_x_log10()
 
-BRANDO.2 <- data.table(BRANDO.2)
+decile.av.sizes <- BRANDO.2[, mean(studysize), by = sizedecile][[2]]
+
 asdf <- BRANDO.2[blind != "NA", summary(blind)[2] / (summary(blind)[1] + summary(blind)[2]), by = sizedecile]
-ggplot(asdf, aes(x = sizedecile, y = V1)) + geom_point()
+ggplot(asdf, aes(x = decile.av.sizes, y = asdf$V1)) + geom_point() + scale_x_log10()
 
 asdf <- BRANDO.2[alloc != "NA", summary(alloc)[2] / (summary(alloc)[1] + summary(alloc)[2]), by = sizedecile]
-ggplot(asdf, aes(x = sizedecile, y = V1)) + geom_point()
+ggplot(asdf, aes(x = decile.av.sizes, y = asdf$V1)) + geom_point() + scale_x_log10()
 
 asdf <- BRANDO.2[random != "NA", summary(random)[2] / (summary(random)[1] + summary(random)[2]), by = sizedecile]
-ggplot(asdf, aes(x = sizedecile, y = V1)) + geom_point()
+ggplot(asdf, aes(x = decile.av.sizes, y = asdf$V1)) + geom_point() + scale_x_log10()
 
 ###### By quartile
 
@@ -93,7 +95,7 @@ ggplot(asdf, aes(x = sizedecile, y = V1)) + geom_point()
 
 #### Bin by sample size
 
-BRANDO.2[blind != "NA", summary(blind)[2] / (summary(blind)[1] + summary(blind)[2]), by = between(studysize, 50, 100)]
-BRANDO.2[alloc != "NA", summary(alloc)[2] / (summary(alloc)[1] + summary(alloc)[2]), by = between(studysize, 50, 100)]
-BRANDO.2[random != "NA", summary(random)[2] / (summary(random)[1] + summary(random)[2]), by = between(studysize, 50, 100)]
+BRANDO.2[blind != "NA", summary(blind)[2] / (summary(blind)[1] + summary(blind)[2]), by = between(studysize, 500, 1000)]
+BRANDO.2[alloc != "NA", summary(alloc)[2] / (summary(alloc)[1] + summary(alloc)[2]), by = between(studysize, 500, 1000)]
+BRANDO.2[random != "NA", summary(random)[2] / (summary(random)[1] + summary(random)[2]), by = between(studysize, 500, 1000)]
 

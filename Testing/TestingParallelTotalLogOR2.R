@@ -686,7 +686,7 @@ r <- foreach (m = 1:Reps,
               
               ## Draw from binomial how many methodological concerns study has
               #for (a in seq(50, 1000, 100)){ print(1/exp(a^0.15))}
-              Number.of.biases <- rbinom(1, 3, 1/(Study_patientnumber^0.1))
+              Number.of.biases <- rbinom(1, 2, 1/(Study_patientnumber^0.1))
               
               # Currently using alternative formulation with extra mu
               x <- Log_Odds_Ratio(Study_patientnumber, k * (Bias.multiple^Number.of.biases), l, controlProp, j)

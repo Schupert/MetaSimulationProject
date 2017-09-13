@@ -287,7 +287,7 @@ r <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.table"),
             }
             
             ## Draw from binomial how many methodological concerns study has
-            Number.of.biases <- rbinom(1, 3, 1/(Study_patientnumber^0.1))
+            Number.of.biases <- rbinom(1, 2, 1/(Study_patientnumber^0.1))
             
             Study_summary <- UMD(Study_patientnumber, k * (Bias.multiple^Number.of.biases), l, controlProp, True.sd)
             Study_mean <- Study_summary[1]

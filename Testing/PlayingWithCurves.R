@@ -71,7 +71,7 @@ dummy1 <- numeric()
 dummy2 <- numeric()
 
 for (a in seq(0,1000, 1)){
-  Weight2 <- 1/((a)^0.1)
+  Weight2 <- 1/((a)^0.06)
   
   dummy1 <- append(dummy1, a)
   dummy2 <- append(dummy2, Weight2)
@@ -79,7 +79,7 @@ for (a in seq(0,1000, 1)){
 }
 
 plot(dummy1, dummy2, ylim = c(0,1))
-abline (h = 0.5)
+abline (h = 0.7)
 
 mean(dummy2)
 

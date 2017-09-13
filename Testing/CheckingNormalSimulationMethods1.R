@@ -29,7 +29,7 @@ Subj = 100
 True.sd = 2
 
 # theta = population level mean
-theta = 0
+theta = 1
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(2)
@@ -40,7 +40,7 @@ tau.sq = c(2)
 controlProp = 0.5
 
 # Size of per unit bias increase
-Bias.multiple <- 0.2
+Bias.multiple <- 1/0.9
 
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
@@ -52,7 +52,7 @@ ID =  length(Subj) * length(True.sd) * length(theta) * length(tau.sq) * Reps * s
 UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
-  Group2Size <- as.integer(StudySize - Group1Size)
+  Group2Size <- Group1Size
   ControlGroup <- rnorm(Group1Size, -StudyUMD/2, sd)
   TreatmentGroup <- rnorm(Group2Size, StudyUMD/2, sd)
   Studymean <- mean(TreatmentGroup) - mean(ControlGroup)
@@ -104,9 +104,9 @@ for (i in Subj){
               
               ## Draw from binomial how many methodological concerns study has
               #for (a in seq(50, 1000, 100)){ print(1/exp(a^0.15))}
-              Number.of.biases <- rbinom(1, 3, 1/(Study_patientnumber^0.1))
+              Number.of.biases <- rbinom(1, 2, 1/(Study_patientnumber^0.06))
               
-              Study_summary <- UMD(Study_patientnumber, k + Number.of.biases*Bias.multiple, l, controlProp, True.sd)
+              Study_summary <- UMD(Study_patientnumber, k * (Number.of.biases^Bias.multiple), l, controlProp, True.sd)
               Study_mean <- Study_summary[1]
               Study_StanDev <- Study_summary[2]
               

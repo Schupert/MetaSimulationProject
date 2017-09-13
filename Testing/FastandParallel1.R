@@ -8,7 +8,7 @@ library(foreach)
 library(doRNG)
 
 library(compiler)
-enableJIT(3)
+#enableJIT(3)
 
 set.seed(123)
 
@@ -19,7 +19,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10
+Reps = 100
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -57,6 +57,7 @@ Sd.split <- 0.5
 Bias.multiple <- 1/0.9
 
 ### Unstandardised mean differrence function
+## Altered with pooled standard deviation formula and sample sizes fixed to be equal
 
 UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
@@ -65,23 +66,24 @@ UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
   ControlGroup <- rnorm(Group1Size, -StudyUMD/2, sd)
   TreatmentGroup <- rnorm(Group2Size, StudyUMD/2, sd)
   Studymean <- mean(TreatmentGroup) - mean(ControlGroup)
-  Studysd <- sqrt( var(ControlGroup)/Group1Size + var(TreatmentGroup)/Group2Size )
+  Studysd <- sqrt( (var(ControlGroup) * (Group1Size - 1) + var(TreatmentGroup) * (Group2Size-1))/ (Group1Size + Group2Size -2) )
   return(c(Studymean, Studysd))
 }
 
 ### UMD function with multiple outcome bias with frac being sd in first level, num.times = number of outcomes simulated
 # outputs vectors ordered by p-val
+## Altered to have sample sizes equal and pooled standard deviation
 
 UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd, frac, num.times){
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
-  Group2Size <- as.integer(StudySize - Group1Size)
+  Group2Size <- Group1Size
   ControlGroup1 <- rnorm(Group1Size, -StudyUMD/2, sqrt(frac) * total.sd)
   TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD/2, sqrt(frac) * total.sd)
   ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
   TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
   Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
-  Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
+  Studysd <- sqrt( ( sapply(ControlGroupAll, var) * (Group1Size - 1) + sapply(TreatmentGroupAll, var)* (Group2Size-1) ) / (Group1Size + Group2Size -2))
   Begg_p <- pnorm(-Studymean/Studysd)
   return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
 }
@@ -151,9 +153,10 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table"),
           Study_summary <- UMD(Study_patientnumber, k, l, controlProp, True.sd)
           Study_mean <- Study_summary[1]
           Study_StanDev <- Study_summary[2]
+          Study.n <- as.integer(0.5*Study_patientnumber) * 2
           
           Normal.Simulation[dummy.counter, `:=` (Unique_ID = counter, Study_estimate = Study_mean, Study_sd = Study_StanDev,
-                                                 Study_n = Study_patientnumber)]
+                                                 Study_n = Study.n)]
           
           dummy.counter <- dummy.counter + 1
           
@@ -175,7 +178,13 @@ for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
 Normal.Simulation$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
 Normal.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(tau.sq)))
 Normal.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)), times = length(Subj))
-Normal.Simulation$Rep_Subj = rep(Subj, each = ID / length(Subj))
+
+### Create keyable vector for Subj
+Subj2 <- c(60, 30, 250, 4.2)
+Normal.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
 
 TimeTaken <- proc.time() - StartTime
 
+stopCluster(c1)
+
+write.csv(Normal.Simulation, file = "NormalSimulation1.csv")

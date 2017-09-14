@@ -11,12 +11,13 @@ require(data.table)
 #setkey(r, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
 
 ###### Select specific set of results
-Working_copy1 <- r[Rep_Subj == 1 & Rep_theta == 1 & Rep_tau.sq ==3 & Rep_NumStudies == 3]$FE_Estimate
+#Working_copy1 <- r[Rep_Subj == 1 & Rep_theta == 1 & Rep_tau.sq ==3 & Rep_NumStudies == 3]$FE_Estimate
+Working_copy1 <- LogOR.Sim.Results[Rep_Subj == 250 & Rep_theta == log(1) & Rep_tau.sq == 1 & Rep_NumStudies == 100 & Rep_ev_freq == 0.5]$REML_Estimate
 
 ## Can increase multiplier when have more reps to estimate with up to available data/3
-Target_MCE <- 0.01
+Target_MCE <- 0.004
 Reps <- 1000
-Mult <- 33
+Mult <- 16
 
 
 bootstrapMCE <- function(data, indices){

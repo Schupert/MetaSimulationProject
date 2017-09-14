@@ -132,8 +132,7 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
         ma.reml <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "REML")
         ma.DL <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "DL")
         
-        Normal.Sim.Results[dummy.counter, `:=` (Rep_Number= m, Rep_Subj = i, 
-                                                Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
+        Normal.Sim.Results[dummy.counter, `:=` (Unique_ID = counter,
                                                 FE_Estimate = ma.fe[[1]],
                                                 FE_Est_Low_CI = ma.fe[[5]],
                                                 FE_Est_Up_CI = ma.fe[[6]],
@@ -158,6 +157,15 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
 }
 
 Normal.Sim.Results <- r[order(Unique_ID)]
+
+##### Need to re append values - specific to analysis
+ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * Reps * length(Studies)
+
+Normal.Sim.Results$Rep_Number =  rep(1:Reps, times = ID/Reps)
+Normal.Sim.Results$Rep_NumStudies = rep(Studies, times = ID/(Reps*length(Studies)))
+Normal.Sim.Results$Rep_tau.sq = rep(rep(tau.sq, each = Reps * length(Studies)), times = ID/(Reps*length(Studies)*length(tau.sq)*length(EvFreq)))
+Normal.Sim.Results$Rep_theta = rep( rep(theta, each = Reps * length(Studies) * length(tau.sq)), times = length(Subj))
+Normal.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTaken <- proc.time() - StartTime
 

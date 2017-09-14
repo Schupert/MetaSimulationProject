@@ -206,6 +206,7 @@ LogOR.Simulation$Rep_Number =  rep(1:Reps, times = ID/Reps)
 intermediate <- integer()
 for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
 LogOR.Simulation$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
+rm(intermediate)
 LogOR.Simulation$Rep_ev_freq = rep(rep(EvFreq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(EvFreq)))
 LogOR.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)*length(EvFreq)), times = ID/(Reps*sum(Studies)*length(tau.sq)*length(EvFreq)))
 LogOR.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)*length(EvFreq)), times = length(Subj))
@@ -215,6 +216,8 @@ Subj2 <- c(100, 30, 250, 4.7)
 LogOR.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
 
 ### Mean and sd
+##################### Need to work out what to do about 0.5 cells
+
 LogOR.Simulation[, Study_estimate := log( (Study_G2O1 / ((Study_n/2) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2) - Study_G1O1) ) )]
 LogOR.Simulation[, Study_sd := sqrt(1/Study_G1O1 + 1/(Study_n - Study_G1O1) + 1/Study_G2O1 + 1/(Study_n - Study_G2O1))]  
 

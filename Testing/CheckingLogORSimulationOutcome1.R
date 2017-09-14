@@ -93,6 +93,48 @@ Log_Odds_Ratio <- function(StudySize, Log_O_R, Heterogeneity, Control_Prop, mu){
   return(c(Group1Out1, Group1Out2, Group2Out1, Group2Out2, Group1Size, Group2Size))
 }
 
+LogOR.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, mu, frac, num.times){
+  StudyLogOR <- rnorm(1, Theta, sqrt(Heterogeneity))
+  Group1Size <- as.integer(Control_Prop*StudySize)
+  Group2Size <- Group1Size
+  Pic <- exp(mu - 0.5*StudyLogOR) / (1 + exp(mu - 0.5*StudyLogOR))
+  Pit <- exp(mu + 0.5*StudyLogOR)  / (1 + exp(mu + 0.5*StudyLogOR))
+  ### This doesn't create correlated outcomes
+  z <- normalCopula(param = frac, dim = Group1Size)
+  Z <- rCopula(num.times, z)
+  ControlGroup <- qbinom(Z, size=1, prob=Pic)
+  CGO1 <- apply(ControlGroup, 1, sum)
+  CGO2 <- Group1Size - CGO1
+  
+  y <- normalCopula(param = frac, dim = Group1Size)
+  Y <- rCopula(num.times, y)
+  TreatmentGroup <- qbinom(Y,size=1,prob=Pit)
+  TGO1 <- apply(TreatmentGroup, 1, sum)
+  TGO2 <- Group2Size - TGO1
+  
+  o <- data.table(CGO1, CGO2, TGO1, TGO2)
+  
+#   if (CGO1 == 0 | TGO1 == 0 | CGO2 == 0 | TGO2 == 0){
+#     CGO1 <- CGO1 + 0.5
+#     TGO1 <- TGO1 + 0.5
+#     CGO2 <- CGO2 + 0.5
+#     TGO2 <- TGO2 + 0.5
+#   }
+  
+  o[CGO1 == 0] <- o[CGO1 == 0] + 0.5
+  o[CGO2 == 0] <- o[CGO2 == 0] + 0.5
+  o[TGO1 == 0] <- o[TGO1 == 0] + 0.5
+  o[TGO2 == 0] <- o[TGO2 == 0] + 0.5
+  
+  ############### Can use same selection mechanism but need to solve problem of what happens with 0 celled results
+  
+  Study.est <- log((o$TGO1/o$TGO2) / (o$CGO1/o$CGO2))
+  Study.se <- sqrt(1/o$TGO1 + 1/o$TGO2 + 1/o$CGO1 + 1/o$CGO2)
+  Study.p.val <- pnorm(-Study.est/Study.se)
+  
+  return(c(o$CGO1[order(Study.p.val)], o$CGO2[order(Study.p.val)], o$TGO1[order(Study.p.val)], o$TGO2[order(Study.p.val)], Group1Size, Group2Size))
+}
+
 
 ### Set up data.table to store results
 

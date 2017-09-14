@@ -27,7 +27,7 @@ if (length(regmatches(workingDirectory, gregexpr("/Results", workingDirectory)))
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 100
+Reps = 10
 
 # k = number of studies in series
 Studies = c(1)
@@ -60,25 +60,14 @@ UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
   Group2Size <- Group1Size
-  
-  ### This isn't working
   z <- normalCopula(param = frac, dim = Group1Size)
   Z <- rCopula(num.times, z)
   ControlGroup <- qnorm(Z, mean = -StudyUMD/2, sd = total.sd)
-  
   y <- normalCopula(param = frac, dim = Group1Size)
   Y <- rCopula(num.times, y)
   TreatmentGroup <- qnorm(Y, mean = StudyUMD/2, sd = total.sd)
-
   Studymean <- apply(TreatmentGroup,1,mean) - apply(ControlGroup, 1, mean)
   Studysd <- sqrt( (apply(TreatmentGroup, 1, var) * (Group1Size - 1) + apply(TreatmentGroup, 1, var) * (Group2Size-1))/ (Group1Size + Group2Size -2) )
-    
-#   ControlGroup1 <- rnorm(Group1Size, -StudyUMD/2, sqrt(frac) * total.sd)
-#   TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD/2, sqrt(frac) * total.sd)
-#   ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
-#   TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
-#  Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
-#  Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
   Begg_p <- pnorm(-Studymean/Studysd)
   return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
 }
@@ -227,7 +216,14 @@ cor(output2)
 #### Likely correct correlation set up, estimates show equal to first level sd plit = sd.split
 output <- matrix(unlist(Normal.Simulation$Study_rejectedMeans), ncol = Tested.outcomes, byrow = TRUE)
 dim(output)
+cor(output[1,], output[10,])
 asdf <-cor(output)
 mean(asdf[lower.tri(asdf)])
 hist(asdf[lower.tri(asdf)])
 plot(output[,8], output[,6])
+
+### ? Is this correct - likely not
+output2 <- matrix(unlist(Normal.Simulation$Study_rejectedMeans), ncol = Reps, byrow = FALSE)
+asdf2 <- cor(output2)
+mean(asdf2[lower.tri(asdf2)])
+plot(output2[,8], output2[,6])

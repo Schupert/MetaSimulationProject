@@ -33,7 +33,8 @@ Studies = c(3,5,10,30,50,100)
 #Studies = c(3,5,10,30)
 
 # subj = number of subjects in study, likely to be distributed
-Subj <- list(as.integer(c(100,100)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.7, 1.2)))
+#Subj <- list(as.integer(c(100,100)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.7, 1.2)))
+Subj <- c(100, 30, 250, 4.7)
 
 # sd = study level standard deviation
 True.sd = 2
@@ -173,6 +174,19 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
 }
 
 LogOR.Sim.Results <- r[order(Unique_ID)]
+
+##### Need to re append values - specific to analysis
+ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * length(EvFreq) * Reps * length(Studies)
+
+LogOR.Sim.Results$Rep_Number =  rep(1:Reps, times = ID/Reps)
+LogOR.Sim.Results$Rep_NumStudies = rep(Studies, times = ID/(Reps*length(Studies)))
+LogOR.Sim.Results$Rep_ev_freq = rep(rep(EvFreq, each = Reps * length(Studies)), times = ID/(Reps*length(Studies)*length(EvFreq)))
+LogOR.Sim.Results$Rep_tau.sq = rep(rep(tau.sq, each = Reps * length(Studies)*length(EvFreq)), times = ID/(Reps*length(Studies)*length(tau.sq)*length(EvFreq)))
+LogOR.Sim.Results$Rep_theta = rep( rep(theta, each = Reps * length(Studies) * length(tau.sq)*length(EvFreq)), times = length(Subj))
+
+# ### Create keyable vector for Subj
+# Subj2 <- c(100, 30, 250, 4.7)
+LogOR.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTaken <- proc.time() - StartTime
 

@@ -27,7 +27,7 @@ if (length(regmatches(workingDirectory, gregexpr("/Results", workingDirectory)))
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10
+Reps = 1000
 
 # k = number of studies in series
 Studies = c(1)
@@ -48,7 +48,7 @@ tau.sq = c(0)
 
 Tested.outcomes <- 100
 Chosen.outcomes <- 1
-Sd.split <- 0.9
+Sd.split <- 0.6
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -60,16 +60,17 @@ UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
   Group2Size <- Group1Size
-  z <- normalCopula(param = frac, dim = Group1Size)
-  Z <- rCopula(num.times, z)
+  z <- normalCopula(param = frac, dim = num.times)
+  Z <- rCopula(Group1Size, z)
   ControlGroup <- qnorm(Z, mean = -StudyUMD/2, sd = total.sd)
-  y <- normalCopula(param = frac, dim = Group1Size)
-  Y <- rCopula(num.times, y)
+  y <- normalCopula(param = frac, dim = num.times)
+  Y <- rCopula(Group1Size, y)
   TreatmentGroup <- qnorm(Y, mean = StudyUMD/2, sd = total.sd)
-  Studymean <- apply(TreatmentGroup,1,mean) - apply(ControlGroup, 1, mean)
-  Studysd <- sqrt( (apply(TreatmentGroup, 1, var) * (Group1Size - 1) + apply(TreatmentGroup, 1, var) * (Group2Size-1))/ (Group1Size + Group2Size -2) )
+  Studymean <- apply(TreatmentGroup,2,mean) - apply(ControlGroup, 2, mean)
+  Studysd <- sqrt( (apply(TreatmentGroup, 2, var) * (Group1Size - 1) + apply(TreatmentGroup, 2, var) * (Group2Size-1))/ (Group1Size + Group2Size -2) )
   Begg_p <- pnorm(-Studymean/Studysd)
-  return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
+  #return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
+  return(list(Studymean, Studysd))
 }
 
 
@@ -221,9 +222,12 @@ asdf <-cor(output)
 mean(asdf[lower.tri(asdf)])
 hist(asdf[lower.tri(asdf)])
 plot(output[,8], output[,6])
+abline(a = 0, b = 1)
+
 
 ### ? Is this correct - likely not
 output2 <- matrix(unlist(Normal.Simulation$Study_rejectedMeans), ncol = Reps, byrow = FALSE)
 asdf2 <- cor(output2)
 mean(asdf2[lower.tri(asdf2)])
 plot(output2[,8], output2[,6])
+abline(a = 0, b = 1)

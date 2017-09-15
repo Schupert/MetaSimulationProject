@@ -4,6 +4,7 @@ rm(list = ls())
 #### Libraries
 library(data.table)
 library(metafor)
+library(copula)
 
 #### Set working directory - this is a problem with transferring code around computers. 
 ####    Current system works when opened using R project - sets wd to project wd/Results
@@ -18,16 +19,17 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 1000
+Reps = 100
 
 # k = number of studies in series
 Studies = c(1)
 
 # subj = number of subjects in study, likely to be distributed
+#Subj = list(c(100,100))
 Subj = 100
 
 # controlProp = proportion of total sample in control arm
-controlProp = 0.5
+controlProp = 0.1
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
 theta = c(log(1))
@@ -41,8 +43,9 @@ EvFreq = c(0.5)
 # ?need to state I.sq in advance?
 
 # Set up within study reporting bias - this is now one sided
-Tested.outcomes <- 10
+Tested.outcomes <- 100
 Chosen.outcomes <- 1
+Sd.split <- 0.6
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
 ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * length(EvFreq) * Reps * sum(Studies) 
@@ -93,23 +96,23 @@ Log_Odds_Ratio <- function(StudySize, Log_O_R, Heterogeneity, Control_Prop, mu){
   return(c(Group1Out1, Group1Out2, Group2Out1, Group2Out2, Group1Size, Group2Size))
 }
 
-LogOR.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, mu, frac, num.times){
+LogOR_mult_out <- function(StudySize, Theta, Heterogeneity, Control_Prop, mu, frac, num.times){
   StudyLogOR <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
   Group2Size <- Group1Size
   Pic <- exp(mu - 0.5*StudyLogOR) / (1 + exp(mu - 0.5*StudyLogOR))
   Pit <- exp(mu + 0.5*StudyLogOR)  / (1 + exp(mu + 0.5*StudyLogOR))
   ### This doesn't create correlated outcomes
-  z <- normalCopula(param = frac, dim = Group1Size)
-  Z <- rCopula(num.times, z)
+  z <- normalCopula(param = frac, dim = num.times)
+  Z <- rCopula(Group1Size, z)
   ControlGroup <- qbinom(Z, size=1, prob=Pic)
-  CGO1 <- apply(ControlGroup, 1, sum)
+  CGO1 <- apply(ControlGroup, 2, sum)
   CGO2 <- Group1Size - CGO1
   
-  y <- normalCopula(param = frac, dim = Group1Size)
-  Y <- rCopula(num.times, y)
+  y <- normalCopula(param = frac, dim = num.times)
+  Y <- rCopula(Group1Size, y)
   TreatmentGroup <- qbinom(Y,size=1,prob=Pit)
-  TGO1 <- apply(TreatmentGroup, 1, sum)
+  TGO1 <- apply(TreatmentGroup, 2, sum)
   TGO2 <- Group2Size - TGO1
   
   o <- data.table(CGO1, CGO2, TGO1, TGO2)
@@ -132,32 +135,36 @@ LogOR.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, mu, fr
   Study.se <- sqrt(1/o$TGO1 + 1/o$TGO2 + 1/o$CGO1 + 1/o$CGO2)
   Study.p.val <- pnorm(-Study.est/Study.se)
   
-  return(c(o$CGO1[order(Study.p.val)], o$CGO2[order(Study.p.val)], o$TGO1[order(Study.p.val)], o$TGO2[order(Study.p.val)], Group1Size, Group2Size))
-}
+  #return(c(o$CGO1[order(Study.p.val)], o$CGO2[order(Study.p.val)], o$TGO1[order(Study.p.val)], o$TGO2[order(Study.p.val)], Group1Size, Group2Size))
+return(c(o[order(Study.p.val)], Group1Size))
+  }
 
 
 ### Set up data.table to store results
 
 LogOR.Simulation <- data.table(
-  Unique_ID = c(1:ID),
-  Rep_Number = integer(length = ID),
-  Rep_Subj = integer(length = ID),
-  Rep_control_proportion = numeric(length = ID),
-  Rep_theta = numeric(length = ID),
-  Rep_tau.sq = numeric(length = ID),
-  Rep_NumStudies = numeric(length = ID),
-  Study_ID = integer(length = ID),
-  Study_estimate = numeric(length = ID),
-  Study_sd = numeric(length = ID),
+  Unique_ID = integer(length = ID),
+  #Rep_Number = integer(length = ID),
+  #Rep_Subj = integer(length = ID),
+  #Rep_ev_freq = numeric(length = ID),
+  #Rep_theta = numeric(length = ID),
+  #Rep_tau.sq = numeric(length = ID),
+  #Rep_NumStudies = numeric(length = ID),
+  #Study_ID = integer(length = ID),
+  #Study_estimate = numeric(length = ID),
+  #Study_sd = numeric(length = ID),
+  Study_G1O1 = numeric(length = ID),
+  Study_G2O1 = numeric(length = ID),
   Study_n = integer(length = ID),
-  Group1Outcome1 = numeric(length = ID),
-  Group1Outcome2 = numeric(length = ID),
-  Group2Outcome1 = numeric(length = ID),
-  Group2Outcome2 = numeric(length = ID),
-  Group1Size = integer(length = ID),
-  Group2Size = integer(length = ID),
-  Study_rejectedMeans = list(length = ID),
-  Study_rejectedSDs = list(length = ID)
+  #     Group1Outcome1 = numeric(length = ID),
+  #     Group1Outcome2 = numeric(length = ID),
+  #     Group2Outcome1 = numeric(length = ID),
+  #     Group2Outcome2 = numeric(length = ID),
+  #     Group1Size = integer(length = ID),
+  #     Group2Size = integer(length = ID),
+  Study_rej_G1O1 = list(length = ID),
+  Study_rej_G2O1 = list(length = ID),
+  Study_Number.of.biases = integer(length = ID)
 )
 
 ### Simulate
@@ -185,7 +192,7 @@ for (i in Subj){
               for (p in EvFreq){
                 
                 #Statement left in case of varying number of subjects later
-                Study_patientnumber <- round(rlnorm(1, meanlog = 4.6, sdlog = 1))
+                #Study_patientnumber <- round(rlnorm(1, meanlog = 4.6, sdlog = 1))
                 
                 
                 ### Implement Within study multiple outcomes bias - split variance by simulating values
@@ -203,41 +210,57 @@ for (i in Subj){
                 #                   
                 
                 
-                # In the log(OR) condition tau2 variance is split between study level and person level
-                Study_mu <- rnorm(1, mean = k, sd = sqrt(0.5 * l))
-                #Person_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = sqrt(0.5*l))
+#                 # In the log(OR) condition tau2 variance is split between study level and person level
+#                 Study_mu <- rnorm(1, mean = k, sd = sqrt(0.5 * l))
+#                 #Person_values <- rnorm(Study_patientnumber, mean = Study_mu, sd = sqrt(0.5*l))
+#                 
+#                 # Sample multiple outcome measures from same set of patients, using Person_values as mean
+#                 #Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Person_values, sd = (1/sqrt(2))*j) )
+#                 Study_values <- replicate(Tested.outcomes, Log_Odds_Ratio(Study_patientnumber, Study_mu, 0.5 * l, j, p) )
+#                 
+#                 Study_mean <- numeric(length = Tested.outcomes)
+#                 Study_StanDev <- numeric(length = Tested.outcomes)
+#                 Begg_p <- numeric(length = Tested.outcomes)
+#                 
+#                 for (z in 1:Tested.outcomes) {
+#                   Study_mean[z] <- log((Study_values[3,z]/Study_values[4,z])/(Study_values[1,z]/Study_values[2,z]))
+#                   Study_StanDev[z] <- sqrt(1/Study_values[1,z] + 1/Study_values[2,z] + 1/Study_values[3,z] + 1/Study_values[4,z])
+#                   Begg_p[z] <- pnorm(-Study_mean[z]/(Study_StanDev[z]))
+#                 }
+#                 
+#                 lv <- which.min(Begg_p)
                 
-                # Sample multiple outcome measures from same set of patients, using Person_values as mean
-                #Study_values <- replicate(Tested.outcomes, rnorm(Study_patientnumber, mean = Person_values, sd = (1/sqrt(2))*j) )
-                Study_values <- replicate(Tested.outcomes, Log_Odds_Ratio(Study_patientnumber, Study_mu, 0.5 * l, j, p) )
+                #Select sample size
+#                 if (is.integer(i[1]) == TRUE){
+#                   Study_patientnumber <- round(runif(1, i[1], i[2]))
+#                 } else {
+#                   Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2) + 2)
+#                 }
+                Study_patientnumber = i
                 
-                Study_mean <- numeric(length = Tested.outcomes)
-                Study_StanDev <- numeric(length = Tested.outcomes)
-                Begg_p <- numeric(length = Tested.outcomes)
+                x <- LogOR_mult_out(Study_patientnumber, k, l, controlProp, j, Sd.split, Tested.outcomes)
+                x.N <- 2*x[[5]]
                 
-                for (z in 1:Tested.outcomes) {
-                  Study_mean[z] <- log((Study_values[3,z]/Study_values[4,z])/(Study_values[1,z]/Study_values[2,z]))
-                  Study_StanDev[z] <- sqrt(1/Study_values[1,z] + 1/Study_values[2,z] + 1/Study_values[3,z] + 1/Study_values[4,z])
-                  Begg_p[z] <- pnorm(-Study_mean[z]/(Study_StanDev[z]))
-                }
-                
-                lv <- which.min(Begg_p)
-                
+                LogOR.Simulation[counter, `:=` (#Unique_ID = counter,
+                                                      Study_G1O1 = x[[1]][1], 
+                                                      Study_G2O1 = x[[3]][1], 
+                                                      Study_n = x.N,
+                                                      Study_rej_G1O1 = list(x[[1]][-1]),
+                                                      Study_rej_G2O1 = list(x[[3]][-1]) 
+                                                      )]
                 
                 
-                LogOR.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_control_proportion = j,
-                                                             Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
-                                                             Study_ID = o, 
-                                                             Study_estimate = Study_mean[lv], 
-                                                             Study_sd = Study_StanDev[lv],
-                                                             Study_n = Study_patientnumber,
-                                                             Group1Outcome1 = Study_values[1,lv], Group1Outcome2 = Study_values[2,lv],
-                                                             Group2Outcome1 = Study_values[3,lv], Group2Outcome2 = Study_values[4,lv],
-                                                             Group1Size = Study_values[5,lv], Group2Size = Study_values[6,lv],
-                                                             Study_rejectedMeans = list(Study_mean[-lv]),
-                                                             Study_rejectedSDs = list(Study_StanDev[-lv])
-                )]
                 
+#                 LogOR.Simulation[Unique_ID == counter, `:=` (Rep_Number= m, Rep_Subj = i, Rep_control_proportion = j,
+#                                                              Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,
+#                                                              Study_ID = o, 
+#                                                              Study_G1O1 = x[1], 
+#                                                              Study_G2O1 = x[3], 
+#                                                              Study_n = x.N
+#                                                              Study_rejectedMeans = list(Study_mean[-lv]),
+#                                                              Study_rejectedSDs = list(Study_StanDev[-lv])
+#                 )]
+#                 
                 counter <- counter + 1
               }
             }
@@ -249,6 +272,32 @@ for (i in Subj){
 }
 
 #write.csv(LogOR.Simulation, file = "LogORSimulationOutcome1.csv")
+
+# if(LogOR.Simulation$Study_G1O1 %% 1 == 0.5){
+#   LogOR.Simulation[, Study_estimate := log( (Study_G2O1 / ((Study_n/2 + 1) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2 + 1) - Study_G1O1) ) )]
+#   LogOR.Simulation[, Study_sd := sqrt(1/Study_G1O1 + 1/((Study_n/2 + 1) - Study_G1O1) + 1/Study_G2O1 + 1/((Study_n/2 + 1) - Study_G2O1))]
+#   
+# } else {
+#   LogOR.Simulation[, Study_estimate := log( (Study_G2O1 / ((Study_n/2) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2) - Study_G1O1) ) )]
+#   LogOR.Simulation[, Study_sd := sqrt(1/Study_G1O1 + 1/(Study_n/2 - Study_G1O1) + 1/Study_G2O1 + 1/(Study_n/2 - Study_G2O1))]
+#   
+# }
+# 
+# LogOR.Simulation$Study_estimate <- ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5, log( (Study_G2O1 / ((Study_n/2 + 1) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2 + 1) - Study_G1O1) ) ),
+#                                           log( (Study_G2O1 / ((Study_n/2) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2) - Study_G1O1) ) ))
+#        
+
+
+LogOR.Simulation[, Study_estimate := ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5, 
+                                            log( (Study_G2O1 / ((Study_n/2 + 1) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2 + 1) - Study_G1O1) ) ),
+                                            log( (Study_G2O1 / ((Study_n/2) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2) - Study_G1O1) ) ) )
+                 ]
+
+LogOR.Simulation[, Study_sd := ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5, 
+                                      sqrt(1/Study_G1O1 + 1/((Study_n/2 + 1) - Study_G1O1) + 1/Study_G2O1 + 1/((Study_n/2 + 1) - Study_G2O1)),
+                                      sqrt(1/Study_G1O1 + 1/(Study_n/2 - Study_G1O1) + 1/Study_G2O1 + 1/(Study_n/2 - Study_G2O1)) )
+                 ]
+
 
 TimeTaken <- proc.time() - StartTime
 

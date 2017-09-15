@@ -13,8 +13,8 @@ enableJIT(3)
 
 ## Set working directory
 
-#Normal.Simulation <- read.csv("NormalSimulation1.csv")
-#Normal.Simulation <- data.table(Normal.Simulation)
+Normal.Simulation <- read.csv("NormalSimulation1.csv")
+Normal.Simulation <- data.table(Normal.Simulation)
 setkey(Normal.Simulation, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
 
 
@@ -128,9 +128,27 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
         temp.data <- Normal.Simulation[J(m, i, k, l, n)]
         
         
-        ma.fe <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd , method = "FE")
-        ma.reml <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "REML")
-        ma.DL <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "DL")
+        ma.fe <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2 , method = "FE")
+        ma.reml <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML")
+        ma.DL <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "DL")
+        ma.hc.reml <- hc(ma.reml)
+        ma.hc.DL <- hc(ma.DL)
+        ma.reml.kh <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", knha = TRUE)
+        ma.DL.kh <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "DL", knha = TRUE)
+        
+        ## Doi
+        # estimate is equal to fixed effect, as are weights
+        # se seems too high
+        doi.var <- sum( ( as.vector(diag(weights(ma.fe, type = "matrix")))^2 ) * (temp.data$Study_sd^2 + ma.DL$tau2) )
+        
+        
+        ## Moreno (?D-var) - not exactly clear which implementation is being used is likely equation 2a
+        ma.moren <- regtest(ma.fe , predictor = "vi", model = "lm")
+        print.regtest.rma(ma.moren)
+        ma.moren$fit
+        
+        ###### Can potentially only take estimate, standard error, and possibly I2
+        
         
         Normal.Sim.Results[dummy.counter, `:=` (Unique_ID = counter,
                                                 FE_Estimate = ma.fe[[1]],

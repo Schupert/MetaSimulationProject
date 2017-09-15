@@ -218,9 +218,15 @@ LogOR.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
 ### Mean and sd
 ##################### Need to work out what to do about 0.5 cells
 
-LogOR.Simulation[, Study_estimate := log( (Study_G2O1 / ((Study_n/2) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2) - Study_G1O1) ) )]
-LogOR.Simulation[, Study_sd := sqrt(1/Study_G1O1 + 1/(Study_n - Study_G1O1) + 1/Study_G2O1 + 1/(Study_n - Study_G2O1))]  
+LogOR.Simulation[, Study_estimate := ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5, 
+                                            log( (Study_G2O1 / ((Study_n/2 + 1) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2 + 1) - Study_G1O1) ) ),
+                                            log( (Study_G2O1 / ((Study_n/2) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2) - Study_G1O1) ) ) )
+                 ]
 
+LogOR.Simulation[, Study_sd := ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5, 
+                                      sqrt(1/Study_G1O1 + 1/((Study_n/2 + 1) - Study_G1O1) + 1/Study_G2O1 + 1/((Study_n/2 + 1) - Study_G2O1)),
+                                      sqrt(1/Study_G1O1 + 1/(Study_n/2 - Study_G1O1) + 1/Study_G2O1 + 1/(Study_n/2 - Study_G2O1)) )
+                 ]
 TimeTaken <- proc.time() - StartTime
 
 stopCluster(c1)

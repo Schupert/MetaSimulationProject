@@ -187,4 +187,9 @@ TimeTaken <- proc.time() - StartTime
 
 stopCluster(c1)
 
-write.csv(Normal.Simulation, file = "NormalSimulation1.csv")
+#write.csv(Normal.Simulation, file = "NormalSimulation1.csv")
+
+df.Normal.Simulation <- as.data.frame(Normal.Simulation)
+df.Normal.Simulation$Study_rejectedMeans <- vapply(df.Normal.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
+df.Normal.Simulation$Study_rejectedSDs <- vapply(df.Normal.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
+write.csv(df.Normal.Simulation, file = "NormalSimulation1.csv")

@@ -10,22 +10,22 @@ set.seed(3456)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 10000
+Reps = 1
 
 # k = number of studies in series
-Studies = c(1)
+Studies = c(1000)
 
 # subj = number of subjects in study, likely to be distributed
 Subj = 100
 
 # sd = study level standard deviation
-True.sd = 2
+True.sd = sqrt(2)
 
 # theta = population level mean
 theta = 0
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(2)
+tau.sq = c(0.06904763, 0.2761905, 5.247619)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -46,7 +46,7 @@ UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
   ControlGroup <- rnorm(Group1Size, -StudyUMD/2, sd)
   TreatmentGroup <- rnorm(Group2Size, StudyUMD/2, sd)
   Studymean <- mean(TreatmentGroup) - mean(ControlGroup)
-  Studysd <- sqrt( var(ControlGroup)/Group1Size + var(TreatmentGroup)/Group2Size )
+  Studysd <- sqrt( (var(ControlGroup) * (Group1Size - 1) + var(TreatmentGroup) * (Group2Size-1))/ (Group1Size + Group2Size -2) * (1/Group1Size + 1/Group2Size))
   return(c(Studymean, Studysd))
 }
 
@@ -114,6 +114,17 @@ TimeTaken <- proc.time() - StartTime
 
 hist(Normal.Simulation$Study_estimate)
 mean(Normal.Simulation$Study_estimate)
-sd(Normal.Simulation$Study_estimate)
+var(Normal.Simulation$Study_estimate)
 mean(Normal.Simulation$Study_sd)
 hist(Normal.Simulation$Study_sd)
+
+## Checking tau2 values
+ma.DL <- rma.uni(Normal.Simulation$Study_estimate, Normal.Simulation$Study_sd  , method = "DL")
+ma.reml <- rma.uni(Normal.Simulation$Study_estimate, Normal.Simulation$Study_sd  , method = "REML")
+summary(ma.DL)
+ma.DL$I2
+summary(ma.reml)
+ma.reml$I2
+mawd.lm <- lm(Normal.Simulation$Study_estimate ~ 1, weights = 1/(Normal.Simulation$Study_sd))
+sm.mawd.lm <- summary(mawd.lm)
+mean(sm.mawd.lm$residuals^2)

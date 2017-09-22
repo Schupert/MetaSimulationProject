@@ -29,13 +29,13 @@ Studies = c(3,5,10,30,50,100)
 Subj <- list(as.integer(c(100,100)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.7, 1.2)))
 
 # sd = study level standard deviation
-True.sd = 2
+True.sd = sqrt(2)
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
 theta = c(log(0.5), log(1), log(1.5), log(3))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(1,2,3)
+tau.sq = c(0, 0.01777778, 0.04, 3.04)
 
 # Frequency of event averaged across 2 arms (before applying change due to theta) = EvFreq
 EvFreq = c(0.1, 0.3, 0.5)
@@ -231,5 +231,9 @@ TimeTaken <- proc.time() - StartTime
 
 stopCluster(c1)
 
-write.csv(LogOR.Simulation, file = "LogORSimulation1.csv")
+df.LogOR.Simulation <- as.data.frame(LogOR.Simulation)
+df.LogOR.Simulation$Study_rejectedMeans <- vapply(df.LogOR.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
+df.LogOR.Simulation$Study_rejectedSDs <- vapply(df.LogOR.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
+
+write.csv(df.LogOR.Simulation, file = "LogORSimulation1.csv")
 rm(r)

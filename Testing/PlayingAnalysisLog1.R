@@ -13,8 +13,8 @@ enableJIT(3)
 
 ## Set working directory
 
-#LogOR.Simulation <- read.csv("LogORSimulation1.csv")
-#LogOR.Simulation <- data.table(LogOR.Simulation)
+LogOR.Simulation <- read.csv("LogORSimulation1.csv")
+LogOR.Simulation <- data.table(LogOR.Simulation)
 setkey(LogOR.Simulation, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies", "Rep_ev_freq")
 
 
@@ -37,13 +37,13 @@ Studies = c(3,5,10,30,50,100)
 Subj <- c(100, 30, 250, 4.7)
 
 # sd = study level standard deviation
-True.sd = 2
+True.sd = sqrt(2)
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
 theta = c(log(0.5), log(1), log(1.5), log(3))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(1,2,3)
+tau.sq = c(0, 0.01777778, 0.04, 3.04)
 
 # Frequency of event averaged across 2 arms (before applying change due to theta) = EvFreq
 EvFreq = c(0.1, 0.3, 0.5)
@@ -127,10 +127,86 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
           ### Temporary data.table
           temp.data <- LogOR.Simulation[J(m, i, k, l, n, j)]
           
+#           
+#           ma.fe <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd , method = "FE")
+#           ma.reml <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "REML")
+#           ma.DL <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "DL")
+#           
+#           ## Mean of weighted residuals closer to H2 than MSE of unweighted residuals
+#           
+# #           ma.fe$H2
+# #           ma.reml$H2
+#           ma.DL$H2
+#           mawd.lm <- lm(temp.data$Study_estimate ~ 1, weights = 1/(temp.data$Study_sd))
+#           sm.mawd.lm <- summary(mawd.lm)
+#           mean(sm.mawd.lm$residuals^2)
+#           # mean(mawd.lm$residuals^2)
+#           
+#           ifelse(mean(sm.mawd.lm$residuals^2) < 1, phi.est  <- 1, phi.est <- mean(sm.mawd.lm$residuals^2))
+#           
+#           ma.mult <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd * sqrt(phi.est) , method = "FE")
           
-          ma.fe <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd , method = "FE")
-          ma.reml <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "REML")
-          ma.DL <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "DL")
+          #Fixed and random effects
+          
+          ma.fe <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2 , method = "FE")
+          #ma.reml <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", control = list(stepadj = 0.5))
+          
+          ma.reml <- tryCatch({
+            rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", control = list(stepadj = 0.5))
+          },
+          error = function(e){
+            #message(e)
+            return(list("NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA"))
+          },
+          warning = function(w){
+            #message(w)
+            return(list("NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA"))
+          }
+          )
+          
+          ma.DL <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "DL")
+          
+          # Henmi Copas
+          
+          #ma.hc.reml <- hc(ma.reml)
+          ma.hc.DL <- hc(ma.DL)
+          
+          # Knapp Hartung
+          
+          #ma.reml.kh <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", knha = TRUE)
+          ma.DL.kh <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "DL", knha = TRUE)
+          
+          ## Doi
+          # estimate is equal to fixed effect, as are weights
+          doi.var <- sum( ( as.vector(weights(ma.fe, type = "diagonal")/100)^2 ) * (temp.data$Study_sd^2 + ma.DL$tau2) )
+          
+          
+          ## Moreno (?D-var) - not exactly clear which implementation is being used is likely equation 2a
+          ma.moren <- regtest(ma.fe , predictor = "vi", model = "lm")
+          moreno.est <- ma.moren$fit[[5]][1]
+          
+          ## Stanley v2 (PET-PEESE) simply takes Egger value if test value > 0.05, Moreno value if < 0.05
+          
+          ma.egger <- regtest(ma.fe , predictor = "sei", model = "lm")
+          
+          stan.2.est <- ifelse(ma.egger$pval < 0.05, ma.moren$fit[[5]][1], ma.egger$fit[[5]][1])
+          
+          ## Mawdesley
+          # Mean of weighted residuals closer to H2 than MSE of unweighted residuals
+          
+          #           ma.fe$H2
+          #           ma.reml$H2
+          ma.DL$H2
+          mawd.lm <- lm(temp.data$Study_estimate ~ 1, weights = 1/(temp.data$Study_sd))
+          sm.mawd.lm <- summary(mawd.lm)
+          mean(sm.mawd.lm$residuals^2)
+          # mean(mawd.lm$residuals^2)
+          
+          ifelse(mean(sm.mawd.lm$residuals^2) < 1, phi.est  <- 1, phi.est <- mean(sm.mawd.lm$residuals^2))
+          
+          ma.mult <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd * sqrt(phi.est) , method = "FE")
+          
+          ###### Can potentially only take estimate, standard error, and possibly I2
           
           #         LogOR.Sim.Results[dummy.counter, `:=` (Rep_Number= m, Rep_Subj = i, 
           #                                                 Rep_theta = k, Rep_tau.sq = l, Rep_NumStudies = n,

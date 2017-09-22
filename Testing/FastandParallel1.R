@@ -19,7 +19,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 100
+Reps = 50
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -29,13 +29,13 @@ Studies = c(3,5,10,30,50,100)
 Subj <- list(as.integer(c(60,60)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.2, 1.1)))
 
 # sd = study level standard deviation
-True.sd = 2
+True.sd = sqrt(2)
 
 # theta = population level mean - need good sense of range for SMD
 theta = c(-0.5, 0, 0.5, 1)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(1,2,3)
+tau.sq = c(0.06904763, 0.2761905, 5.247619)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -66,7 +66,7 @@ UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
   ControlGroup <- rnorm(Group1Size, -StudyUMD/2, sd)
   TreatmentGroup <- rnorm(Group2Size, StudyUMD/2, sd)
   Studymean <- mean(TreatmentGroup) - mean(ControlGroup)
-  Studysd <- sqrt( (var(ControlGroup) * (Group1Size - 1) + var(TreatmentGroup) * (Group2Size-1))/ (Group1Size + Group2Size -2) )
+  Studysd <- sqrt( (var(ControlGroup) * (Group1Size - 1) + var(TreatmentGroup) * (Group2Size-1))/ (Group1Size + Group2Size -2) * (1/Group1Size + 1/Group2Size))
   return(c(Studymean, Studysd))
 }
 

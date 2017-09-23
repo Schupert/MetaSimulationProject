@@ -43,7 +43,7 @@ True.sd = sqrt(2)
 theta = c(-0.5, 0, 0.5, 1)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(0.06904763, 0.2761905, 5.247619)
+tau.sq = c(0, 0.06904763, 0.2761905, 5.247619)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -81,24 +81,32 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
   
   Normal.Sim.Results <- data.table(
     Unique_ID = integer(length = ID),
-    Rep_Number = integer(length = ID),
-    Rep_Subj = numeric(length = ID),
-    Rep_theta = numeric(length = ID),
-    Rep_tau.sq = numeric(length = ID),
-    Rep_NumStudies = numeric(length = ID),
+#     Rep_Number = integer(length = ID),
+#     Rep_Subj = numeric(length = ID),
+#     Rep_theta = numeric(length = ID),
+#     Rep_tau.sq = numeric(length = ID),
+#     Rep_NumStudies = numeric(length = ID),
     FE_Estimate = numeric(length = ID),
-    FE_Est_Low_CI = numeric(length = ID),
-    FE_Est_Up_CI = numeric(length = ID),
+    FE_se = numeric(length = ID),
     REML_Estimate = numeric(length = ID),
-    REML_Est_Low_CI = numeric(length = ID),
-    REML_Est_Up_CI = numeric(length = ID),
+    REML_se = numeric(length = ID),
     REML_tau2 = numeric(length = ID),
-    REML_I2 = numeric(length = ID),
     DL_Estimate = numeric(length = ID),
-    DL_Est_Low_CI = numeric(length = ID),
-    DL_Est_Up_CI = numeric(length = ID),
+    DL_se = numeric(length = ID),
     DL_tau2 = numeric(length = ID),
-    DL_I2 = numeric(length = ID)
+    DL_I2 = numeric(length = ID),
+HC_Estimate = numeric(length = ID),
+HC_se = numeric(length = ID),
+KH_REML_CIlb = numeric(length = ID),
+  KH_REML_CIub = numeric(length = ID),
+  KH_REML_se = numeric(length = ID),
+  KH_DL_CIlb = numeric(length = ID),
+  KH_DL_CIub = numeric(length = ID),
+  KH_DL_se = numeric(length = ID),
+Doi_var = numeric(length = ID),
+Moreno_Estimate = numeric(length = ID),
+PEESE_Estimate = numeric(length = ID),
+Mult_se = numeric(length = ID)
   )
   dummy.counter <- 1
   
@@ -130,18 +138,15 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
         #Fixed and random effects
         
         ma.fe <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2 , method = "FE")
-        #ma.reml <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", control = list(stepadj = 0.5))
-        
+       
         ma.reml <- tryCatch({
           rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", control = list(stepadj = 0.5))
           },
           error = function(e){
-              #message(e)
-              return(list("NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA"))
+              return(list(b = NA, tau2 = NA, se = NA))
             },
           warning = function(w){
-            #message(w)
-            return(list("NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA","NA"))
+            return(list(list(b = NA, tau2 = NA, se = NA)))
           }
         )
         
@@ -149,12 +154,22 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
         
         # Henmi Copas
         
-        #ma.hc.reml <- hc(ma.reml)
         ma.hc.DL <- hc(ma.DL)
         
         # Knapp Hartung
         
-        #ma.reml.kh <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", knha = TRUE)
+        ma.reml.kh <- tryCatch({
+          rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", knha = TRUE, control = list(stepadj = 0.5))
+        },
+        error = function(e){
+          return(list(b = NA, tau2 = NA, se = NA, ci.lb = NA, ci.ub = NA))
+        },
+        warning = function(w){
+          return(list(b = NA, tau2 = NA, se = NA, ci.lb = NA, ci.ub = NA))
+        }
+        )
+        
+       # ma.reml.kh <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", knha = TRUE)
         ma.DL.kh <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "DL", knha = TRUE)
         
         ## Doi
@@ -177,10 +192,10 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
         
         #           ma.fe$H2
         #           ma.reml$H2
-        ma.DL$H2
+        #ma.DL$H2
         mawd.lm <- lm(temp.data$Study_estimate ~ 1, weights = 1/(temp.data$Study_sd))
         sm.mawd.lm <- summary(mawd.lm)
-        mean(sm.mawd.lm$residuals^2)
+        #mean(sm.mawd.lm$residuals^2)
         # mean(mawd.lm$residuals^2)
         
         ifelse(mean(sm.mawd.lm$residuals^2) < 1, phi.est  <- 1, phi.est <- mean(sm.mawd.lm$residuals^2))
@@ -192,18 +207,27 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
         
         Normal.Sim.Results[dummy.counter, `:=` (Unique_ID = counter,
                                                 FE_Estimate = ma.fe[[1]],
-                                                FE_Est_Low_CI = ma.fe[[5]],
-                                                FE_Est_Up_CI = ma.fe[[6]],
-                                                REML_Estimate = ma.reml[[1]],
-                                                REML_Est_Low_CI = ma.reml[[5]],
-                                                REML_Est_Up_CI = ma.reml[[6]],
-                                                REML_tau2 = ma.reml[[8]],
-                                                REML_I2 = ma.reml[[22]],
+                                                FE_se = ma.fe$se,
+                                                REML_Estimate = ma.reml$b,
+                                                REML_se = ma.reml$se,
+                                                REML_tau2 = ma.reml$tau2,
                                                 DL_Estimate = ma.DL[[1]],
-                                                DL_Est_Low_CI = ma.DL[[5]],
-                                                DL_Est_Up_CI = ma.DL[[6]],
-                                                DL_tau2 = ma.DL[[8]],
-                                                DL_I2 = ma.DL[[22]])]
+                                                DL_se = ma.DL$se,
+                                                DL_tau2 = ma.DL$tau2,
+                                                DL_I2 = ma.DL$I2,
+                                                HC_Estimate = ma.hc.DL$b,
+                                                HC_se = ma.hc.DL$se,
+                                                KH_REML_CIlb = ma.reml.kh$ci.lb,
+                                                  KH_REML_CIub = ma.reml.kh$ci.ub,
+                                                  KH_REML_se = ma.reml.kh$se,
+                                                  KH_DL_CIlb = ma.DL.kh$ci.lb,
+                                                  KH_DL_CIub = ma.DL.kh$ci.ub,
+                                                  KH_DL_se = ma.DL.kh$se,
+                                                Doi_var = doi.var,
+                                                Moreno_Estimate = moreno.est,
+                                                PEESE_Estimate = stan.2.est,
+                                                Mult_se = ma.mult$se
+                                                  )]
         
         
         dummy.counter <- dummy.counter + 1

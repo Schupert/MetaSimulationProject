@@ -19,7 +19,7 @@ set.seed(1234)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 100
+Reps = 1000
 
 # k = number of studies in series
 Studies = c(1)
@@ -29,13 +29,13 @@ Studies = c(1)
 Subj = 100
 
 # controlProp = proportion of total sample in control arm
-controlProp = 0.1
+controlProp = 0.5
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
 theta = c(log(1))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(2)
+tau.sq = c(0)
 
 # Frequency of event averaged across 2 arms (before applying change due to theta) = EvFreq
 EvFreq = c(0.5)
@@ -45,7 +45,7 @@ EvFreq = c(0.5)
 # Set up within study reporting bias - this is now one sided
 Tested.outcomes <- 100
 Chosen.outcomes <- 1
-Sd.split <- 0.6
+Sd.split <- 0.8
 
 # ID = total number of data points required, also used as an ID number. WILL NEED UPDATING
 ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * length(EvFreq) * Reps * sum(Studies) 
@@ -136,7 +136,9 @@ LogOR_mult_out <- function(StudySize, Theta, Heterogeneity, Control_Prop, mu, fr
   Study.p.val <- pnorm(-Study.est/Study.se)
   
   #return(c(o$CGO1[order(Study.p.val)], o$CGO2[order(Study.p.val)], o$TGO1[order(Study.p.val)], o$TGO2[order(Study.p.val)], Group1Size, Group2Size))
-return(c(o[order(Study.p.val)], Group1Size))
+#return(c(o[order(Study.p.val)], Group1Size))
+  ## Unordered to check corr
+  return(c(o, Group1Size, list(Study.est) ))
   }
 
 
@@ -164,7 +166,8 @@ LogOR.Simulation <- data.table(
   #     Group2Size = integer(length = ID),
   Study_rej_G1O1 = list(length = ID),
   Study_rej_G2O1 = list(length = ID),
-  Study_Number.of.biases = integer(length = ID)
+  Study_Number.of.biases = integer(length = ID),
+  Study_rej_means = list(length = ID)
 )
 
 ### Simulate
@@ -246,7 +249,9 @@ for (i in Subj){
                                                       Study_G2O1 = x[[3]][1], 
                                                       Study_n = x.N,
                                                       Study_rej_G1O1 = list(x[[1]][-1]),
-                                                      Study_rej_G2O1 = list(x[[3]][-1]) 
+                                                      Study_rej_G2O1 = list(x[[3]][-1]),
+                                                      #this is extra
+                                                      Study_rej_means = list(x[[6]])
                                                       )]
                 
                 
@@ -363,3 +368,14 @@ sd(f[1:1000 & f<1000 & f>-1000])
 sd(g[1:1000 & g<1000 & g>-1000])
 
 f <- replicate(3, Log_Odds_Ratio(100, a, 0, 0.5, 0.5))
+
+#### Likely correct correlation set up, estimates show equal to first level sd plit = sd.split
+
+output <- matrix(unlist(LogOR.Simulation$Study_rej_means), ncol = Tested.outcomes, byrow = TRUE)
+dim(output)
+cor(output[1,], output[10,])
+asdf <-cor(output)
+mean(asdf[lower.tri(asdf)])
+hist(asdf[lower.tri(asdf)])
+plot(output[,8], output[,6])
+abline(a = 0, b = 1)

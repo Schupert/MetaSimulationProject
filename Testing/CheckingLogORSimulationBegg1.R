@@ -155,7 +155,7 @@ for (i in Subj){
                   # Study mean changed to absolute - not described in paper
                   Begg_weight <-exp(
                     -Begg_b * (
-                      (Begg_sided * pnorm(- Study_mean/(Study_StanDev))) 
+                      (Begg_sided * pnorm(Study_mean/(Study_StanDev))) 
                       ^Begg_a ) 
                   ) 
                   

@@ -26,13 +26,13 @@ Studies = c(3,5,10,30,50,100)
 #Studies = c(3,5,10,30)
 
 # subj = number of subjects in study, likely to be distributed
-Subj <- list(as.integer(c(100,100)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.7, 1.2)))
+Subj <- list(as.integer(c(100,100)), as.integer(c(20,100)), as.integer(c(250, 1000)), as.numeric(c(4.7, 1.2)))
 
 # sd = study level standard deviation
 True.sd = sqrt(2)
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
-theta = c(log(0.5), log(1), log(1.5), log(3))
+theta = c(log(0.25), log(0.75), log(1), log(1.5), log(4))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(0, 0.01777778, 0.04, 3.04)
@@ -52,12 +52,12 @@ Begg_b <- 4
 Begg_sided <- 1
 
 # Set up within study reporting bias - this is now one sided
-Tested.outcomes <- 10
+Tested.outcomes <- 5
 Chosen.outcomes <- 1
-Sd.split <- 0.5
+Sd.split <- 0.8
 
 # Size of per unit bias increase
-Bias.multiple <- 1/0.9
+Bias.multiple <- 0.9
 
 ### Log_Odds_Ratio changed to keep sample sizes exactly equal
 
@@ -65,10 +65,11 @@ Log_Odds_Ratio <- function(StudySize, Log_O_R, Heterogeneity, Control_Prop, mu){
   StudyLogOR <- rnorm(1, Log_O_R, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
   Group2Size <- Group1Size
-  Pic <- exp(mu - 0.5*StudyLogOR) / (1 + exp(mu - 0.5*StudyLogOR))
+  EventFreq <- log(mu / (1 - mu))
+  Pic <- exp(EventFreq - 0.5*StudyLogOR) / (1 + exp(EventFreq - 0.5*StudyLogOR))
   Group1Out1 <- as.integer(rbinom(1, Group1Size, Pic))
   Group1Out2 <- as.integer(Group1Size - Group1Out1)
-  Pit <- exp(mu + 0.5*StudyLogOR)  / (1 + exp(mu + 0.5*StudyLogOR))
+  Pit <- exp(EventFreq + 0.5*StudyLogOR)  / (1 + exp(EventFreq + 0.5*StudyLogOR))
   Group2Out1 <- as.integer(rbinom(1, Group2Size, Pit))
   Group2Out2 <- as.integer(Group2Size - Group2Out1)
   if (Group1Out1 == 0 | Group2Out1 == 0 | Group1Out2 == 0 | Group2Out2 == 0){
@@ -172,9 +173,9 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table"),
           
           #Select sample size
           if (is.integer(i[1]) == TRUE){
-            Study_patientnumber <- round(runif(1, i[1], i[2]))
+            Study_patientnumber <- as.integer( (runif(1, sqrt(i[1]), sqrt(i[2])))^2 )
           } else {
-            Study_patientnumber <- round(rlnorm(1, meanlog = 4.7, sdlog = 1.2) + 2)
+            Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 2)
           }
           
           x <- Log_Odds_Ratio(Study_patientnumber, k, l, controlProp, j)
@@ -212,7 +213,7 @@ LogOR.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)*length(
 LogOR.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)*length(EvFreq)), times = length(Subj))
 
 ### Create keyable vector for Subj
-Subj2 <- c(100, 30, 250, 4.7)
+Subj2 <- c(100, 20, 250, 4.7)
 LogOR.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
 
 ### Mean and sd

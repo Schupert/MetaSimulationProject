@@ -287,7 +287,7 @@ r <- foreach (m = 1:Reps,
                 # Study mean changed to absolute - not described in paper
                 Begg_weight <-exp(
                   -Begg_b * (
-                    (Begg_sided * pnorm(- Study_mean/(Study_StanDev))) 
+                    (Begg_sided * pnorm(Study_mean/(Study_StanDev))) 
                     ^Begg_a ) 
                 ) 
                 
@@ -417,7 +417,7 @@ r <- foreach (m = 1:Reps,
                 Study_mean <- log((x[3]/x[4])/(x[1]/x[2]))
                 Study_StanDev <- sqrt(1/x[1] + 1/x[2] + 1/x[3] + 1/x[4])
                 
-                Begg_p <- pnorm(- Study_mean/(Study_StanDev))
+                Begg_p <- pnorm(Study_mean/(Study_StanDev))
                 
                 Step_weight <- ifelse(Begg_p < Severity.boundary[1], 1, ifelse(Begg_p < Severity.boundary[2], 0.75, 0.25))
                 
@@ -555,7 +555,7 @@ r <- foreach (m = 1:Reps,
               for (z in 1:Tested.outcomes) {
                 Study_mean[z] <- log((Study_values[3,z]/Study_values[4,z])/(Study_values[1,z]/Study_values[2,z]))
                 Study_StanDev[z] <- sqrt(1/Study_values[1,z] + 1/Study_values[2,z] + 1/Study_values[3,z] + 1/Study_values[4,z])
-                Begg_p[z] <- pnorm(-Study_mean[z]/(Study_StanDev[z]))
+                Begg_p[z] <- pnorm(Study_mean[z]/(Study_StanDev[z]))
               }
               
               lv <- which.min(Begg_p)

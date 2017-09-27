@@ -100,8 +100,9 @@ LogOR_mult_out <- function(StudySize, Theta, Heterogeneity, Control_Prop, mu, fr
   StudyLogOR <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
   Group2Size <- Group1Size
-  Pic <- exp(mu - 0.5*StudyLogOR) / (1 + exp(mu - 0.5*StudyLogOR))
-  Pit <- exp(mu + 0.5*StudyLogOR)  / (1 + exp(mu + 0.5*StudyLogOR))
+  EventFreq <- log(mu / (1 - mu))
+  Pic <- exp(EventFreq - 0.5*StudyLogOR) / (1 + exp(EventFreq - 0.5*StudyLogOR))
+  Pit <- exp(EventFreq + 0.5*StudyLogOR)  / (1 + exp(EventFreq + 0.5*StudyLogOR))
   ### This doesn't create correlated outcomes
   z <- normalCopula(param = frac, dim = num.times)
   Z <- rCopula(Group1Size, z)
@@ -133,7 +134,7 @@ LogOR_mult_out <- function(StudySize, Theta, Heterogeneity, Control_Prop, mu, fr
   
   Study.est <- log((o$TGO1/o$TGO2) / (o$CGO1/o$CGO2))
   Study.se <- sqrt(1/o$TGO1 + 1/o$TGO2 + 1/o$CGO1 + 1/o$CGO2)
-  Study.p.val <- pnorm(-Study.est/Study.se)
+  Study.p.val <- pnorm(Study.est/Study.se)
   
   #return(c(o$CGO1[order(Study.p.val)], o$CGO2[order(Study.p.val)], o$TGO1[order(Study.p.val)], o$TGO2[order(Study.p.val)], Group1Size, Group2Size))
 #return(c(o[order(Study.p.val)], Group1Size))

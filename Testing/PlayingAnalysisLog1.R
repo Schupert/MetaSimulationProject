@@ -34,13 +34,13 @@ Studies = c(3,5,10,30,50,100)
 
 # subj = number of subjects in study, likely to be distributed
 #Subj <- list(as.integer(c(100,100)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.7, 1.2)))
-Subj <- c(100, 30, 250, 4.7)
+Subj <- c(100, 20, 250, 4.7)
 
 # sd = study level standard deviation
 True.sd = sqrt(2)
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
-theta = c(log(0.5), log(1), log(1.5), log(3))
+theta = c(log(0.25), log(0.75), log(1), log(1.5), log(4))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(0, 0.01777778, 0.04, 3.04)
@@ -60,12 +60,12 @@ Begg_b <- 4
 Begg_sided <- 1
 
 # Set up within study reporting bias - this is now one sided
-Tested.outcomes <- 10
+Tested.outcomes <- 5
 Chosen.outcomes <- 1
-Sd.split <- 0.5
+Sd.split <- 0.8
 
 # Size of per unit bias increase
-Bias.multiple <- 1/0.9
+Bias.multiple <- 0.9
 
 
 StartTime <- proc.time()
@@ -110,7 +110,8 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
     Doi_var = numeric(length = ID),
     Moreno_Estimate = numeric(length = ID),
     PEESE_Estimate = numeric(length = ID),
-    Mult_se = numeric(length = ID)
+    Mult_se = numeric(length = ID),
+Num_exc = integer(length = ID)
   )
   dummy.counter <- 1
   
@@ -135,24 +136,9 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
           ### Temporary data.table
           temp.data <- LogOR.Simulation[J(m, i, k, l, n, j)]
           
-#           
-#           ma.fe <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd , method = "FE")
-#           ma.reml <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "REML")
-#           ma.DL <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd  , method = "DL")
-#           
-#           ## Mean of weighted residuals closer to H2 than MSE of unweighted residuals
-#           
-# #           ma.fe$H2
-# #           ma.reml$H2
-#           ma.DL$H2
-#           mawd.lm <- lm(temp.data$Study_estimate ~ 1, weights = 1/(temp.data$Study_sd))
-#           sm.mawd.lm <- summary(mawd.lm)
-#           mean(sm.mawd.lm$residuals^2)
-#           # mean(mawd.lm$residuals^2)
-#           
-#           ifelse(mean(sm.mawd.lm$residuals^2) < 1, phi.est  <- 1, phi.est <- mean(sm.mawd.lm$residuals^2))
-#           
-#           ma.mult <- rma.uni(temp.data$Study_estimate, temp.data$Study_sd * sqrt(phi.est) , method = "FE")
+          temp.data <- temp.data[ !((Study_G1O1 == 0.5 & Study_G2O1 == 0.5) | ( ((Study_n/2 + 1) - Study_G1O1) == 0.5 & ((Study_n/2 + 1) - Study_G2O1) == 0.5 ))]
+          Excluded.studies <- n - dim(temp.data)[1]
+
           
           #Fixed and random effects
           
@@ -203,8 +189,7 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
           ## Stanley v2 (PET-PEESE) simply takes Egger value if test value > 0.05, Moreno value if < 0.05
           
           ma.egger <- regtest(ma.fe , predictor = "sei", model = "lm")
-          
-          stan.2.est <- ifelse(ma.egger$pval < 0.05, ma.moren$fit[[5]][1], ma.egger$fit[[5]][1])
+
           
           ## Mawdesley
           # Mean of weighted residuals closer to H2 than MSE of unweighted residuals
@@ -245,7 +230,8 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
                                                   Doi_var = doi.var,
                                                   Moreno_Estimate = moreno.est,
                                                   PEESE_Estimate = stan.2.est,
-                                                  Mult_se = ma.mult$se
+                                                  Mult_se = ma.mult$se,
+                                                 Num_exc = Excluded.studies
           )]
           
           ###### Can potentially only take estimate, standard error, and possibly I2

@@ -6,9 +6,10 @@ library(data.table)
 library(doParallel)
 library(foreach)
 library(doRNG)
+library(copula)
 
 library(compiler)
-#enableJIT(3)
+enableJIT(3)
 
 set.seed(123)
 
@@ -23,7 +24,6 @@ Reps = 50
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
-#Studies = c(3,5,10,30)
 
 # subj = number of subjects in study, likely to be distributed
 Subj <- list(as.integer(c(60,60)), as.integer(c(20,100)), as.integer(c(250, 1000)), as.numeric(c(4.2, 1.1)))
@@ -44,20 +44,19 @@ controlProp = 0.5
 Severity.boundary <- c(0.05, 0.2)
 
 # Set up strength of publication bias selection IF STILL USING
-Begg_a <- 1.5
-Begg_b <- 4
+Begg_a <- 0.5
+Begg_b <- 3
+Begg_c <- -0.3
 Begg_sided <- 1
 
 # Set up within study reporting bias - this is now one sided
 Tested.outcomes <- 5
-Chosen.outcomes <- 1
 Sd.split <- 0.6
 
 # Size of per unit bias increase
 Bias.multiple <- c(log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 
 ### Unstandardised mean differrence function
-## Altered with pooled standard deviation formula and sample sizes fixed to be equal
 
 UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
@@ -72,18 +71,19 @@ UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
 
 ### UMD function with multiple outcome bias with frac being sd in first level, num.times = number of outcomes simulated
 # outputs vectors ordered by p-val
-## Altered to have sample sizes equal and pooled standard deviation
 
 UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd, frac, num.times){
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
   Group2Size <- Group1Size
-  ControlGroup1 <- rnorm(Group1Size, -StudyUMD/2, sqrt(frac) * total.sd)
-  TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD/2, sqrt(frac) * total.sd)
-  ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
-  TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
-  Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
-  Studysd <- sqrt( ( sapply(ControlGroupAll, var) * (Group1Size - 1) + sapply(TreatmentGroupAll, var)* (Group2Size-1) ) / (Group1Size + Group2Size -2))
+  z <- normalCopula(param = frac, dim = num.times)
+  Z <- rCopula(Group1Size, z)
+  ControlGroup <- qnorm(Z, mean = -StudyUMD/2, sd = total.sd)
+  y <- normalCopula(param = frac, dim = num.times)
+  Y <- rCopula(Group1Size, y)
+  TreatmentGroup <- qnorm(Y, mean = StudyUMD/2, sd = total.sd)
+  Studymean <- apply(TreatmentGroup,2,mean) - apply(ControlGroup, 2, mean)
+  Studysd <- sqrt( (apply(TreatmentGroup, 2, var) * (Group1Size - 1) + apply(TreatmentGroup, 2, var) * (Group2Size-1))/ (Group1Size + Group2Size -2) )
   Begg_p <- pnorm(Studymean/Studysd)
   return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
 }
@@ -95,34 +95,28 @@ StartTime <- proc.time()
 
 registerDoParallel(c1)
 set.seed(123)
-r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table"), 
+r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"), 
               .export = c("Studies", "Subj", "True.sd",
                           "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
-                          "Begg_b", "Begg_sided", "Tested.outcomes", "Chosen.outcomes", "Sd.split",
-                          "Bias.multiple", "UMD.mult.out")
-) %:% foreach (k = theta, .combine=rbind, .packages = c("data.table"), 
-           .export = c("Studies", "Subj", "True.sd",
-                       "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
-                       "Begg_b", "Begg_sided", "Tested.outcomes", "Chosen.outcomes", "Sd.split",
-                       "Bias.multiple", "UMD.mult.out")
-  ) %dopar% {
+                          "Begg_b", "Begg_sided", "Tested.outcomes", "Sd.split",
+                          "Bias.multiple", "UMD.mult.out", "Begg_c")
+) %:% foreach (k = theta, .combine=rbind, .packages = c("data.table", "copula"), 
+               .export = c("Studies", "Subj", "True.sd",
+                           "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
+                           "Begg_b", "Begg_sided", "Tested.outcomes", "Sd.split",
+                           "Bias.multiple", "UMD.mult.out", "Begg_c")
+) %dopar% {
   
   ID = length(tau.sq) * Reps * sum(Studies)
   
   Normal.Simulation <- data.table(
     Unique_ID = integer(length = ID),
-    # Rep_Number = integer(length = ID),
-    # Rep_Subj = list(length = ID),
-    # Rep_theta = numeric(length = ID),
-    # Rep_tau.sq = numeric(length = ID),
-    # Rep_NumStudies = numeric(length = ID),
-    # Study_ID = integer(length = ID),
     Study_estimate = numeric(length = ID),
     Study_sd = numeric(length = ID),
-    Study_n = integer(length = ID),
-    Study_rejectedMeans = list(length = ID),
-    Study_rejectedSDs = list(length = ID),
-    Study_Number.of.biases = integer(length = ID)
+    Study_n = integer(length = ID)
+#     Study_rejectedMeans = list(length = ID),
+#     Study_rejectedSDs = list(length = ID),
+#     Study_Number.of.biases = integer(length = ID)
   )
   
   dummy.counter <- 1
@@ -167,7 +161,7 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table"),
     }
   }
   Normal.Simulation
-  }
+}
 
 #### Need to then sort final table and add values for rep number, rep subj, rep theta, rep tau2, rep numstudies
 Normal.Simulation <- r[order(Unique_ID)]
@@ -188,9 +182,9 @@ TimeTaken <- proc.time() - StartTime
 
 stopCluster(c1)
 
-#write.csv(Normal.Simulation, file = "NormalSimulation1.csv")
+write.csv(Normal.Simulation, file = "NSB0V1.csv")
 
-df.Normal.Simulation <- as.data.frame(Normal.Simulation)
-df.Normal.Simulation$Study_rejectedMeans <- vapply(df.Normal.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
-df.Normal.Simulation$Study_rejectedSDs <- vapply(df.Normal.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
-write.csv(df.Normal.Simulation, file = "NormalSimulation1.csv")
+# df.Normal.Simulation <- as.data.frame(Normal.Simulation)
+# df.Normal.Simulation$Study_rejectedMeans <- vapply(df.Normal.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
+# df.Normal.Simulation$Study_rejectedSDs <- vapply(df.Normal.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
+# write.csv(df.Normal.Simulation, file = "NormalSimulation1.csv")

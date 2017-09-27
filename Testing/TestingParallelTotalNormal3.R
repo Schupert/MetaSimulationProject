@@ -68,7 +68,7 @@ UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd
   TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
   Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
   Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
-  Begg_p <- pnorm(-Studymean/Studysd)
+  Begg_p <- pnorm(Studymean/Studysd)
   return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
   }
 
@@ -259,7 +259,7 @@ r <- foreach (m = 1:Reps, .combine=rbind,
               # Study mean changed to absolute - not described in paper
               Begg_weight <-exp(
                 -Begg_b * (
-                  (Begg_sided * pnorm(- Study_mean/(Study_StanDev))) 
+                  (Begg_sided * pnorm(Study_mean/(Study_StanDev))) 
                   ^Begg_a ) 
               ) 
               
@@ -369,7 +369,7 @@ r <- foreach (m = 1:Reps, .combine=rbind,
               Study_mean <- Study_summary[1]
               Study_StanDev <- Study_summary[2]
               
-              Begg_p <- pnorm(- Study_mean/(Study_StanDev))
+              Begg_p <- pnorm(Study_mean/(Study_StanDev))
               
               Step_weight <- ifelse(Begg_p < Severity.boundary[1], 1, ifelse(Begg_p < Severity.boundary[2], 0.75, 0.25))
               

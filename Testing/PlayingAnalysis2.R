@@ -34,16 +34,16 @@ Studies = c(3,5,10,30,50,100)
 
 # subj = number of subjects in study, changed to first part of list for easier keying
 #Subj <- list(as.integer(c(60,60)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.2, 1.1)))
-Subj <- c(60, 30, 250, 4.2)
+Subj <- c(60, 20, 250, 4.2)
 
 # sd = study level standard deviation
 True.sd = sqrt(2)
 
 # theta = population level mean - need good sense of range for SMD
-theta = c(-0.5, 0, 0.5, 1)
+theta = c(-1.5, -0.3, 0, 0.3, 1.5)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(0, 0.06904763, 0.2761905, 5.247619)
+tau.sq = c(0, 0.007, 0.133, 2.533)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -59,10 +59,10 @@ Begg_sided <- 1
 # Set up within study reporting bias - this is now one sided
 Tested.outcomes <- 10
 Chosen.outcomes <- 1
-Sd.split <- 0.5
+Sd.split <- 0.6
 
 # Size of per unit bias increase
-Bias.multiple <- 1/0.9
+Bias.multiple <- c(log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 
 
 StartTime <- proc.time()
@@ -105,7 +105,6 @@ KH_REML_CIlb = numeric(length = ID),
   KH_DL_se = numeric(length = ID),
 Doi_var = numeric(length = ID),
 Moreno_Estimate = numeric(length = ID),
-PEESE_Estimate = numeric(length = ID),
 Mult_se = numeric(length = ID)
   )
   dummy.counter <- 1
@@ -185,7 +184,6 @@ Mult_se = numeric(length = ID)
         
         ma.egger <- regtest(ma.fe , predictor = "sei", model = "lm")
         
-        stan.2.est <- ifelse(ma.egger$pval < 0.05, ma.moren$fit[[5]][1], ma.egger$fit[[5]][1])
       
         ## Mawdesley
         # Mean of weighted residuals closer to H2 than MSE of unweighted residuals
@@ -225,7 +223,6 @@ Mult_se = numeric(length = ID)
                                                   KH_DL_se = ma.DL.kh$se,
                                                 Doi_var = doi.var,
                                                 Moreno_Estimate = moreno.est,
-                                                PEESE_Estimate = stan.2.est,
                                                 Mult_se = ma.mult$se
                                                   )]
         
@@ -255,3 +252,8 @@ write.csv(Normal.Sim.Results, file = "NormalSimAnalysis1.csv")
 
 rm(r)
 
+# mean(as.vector(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533,.(DL_I2)]))
+# mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_I2)
+# mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.133]$DL_I2)
+# mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.007]$DL_I2)
+# mean(Normal.Sim.Results[Rep_theta == 1.5 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_tau2)

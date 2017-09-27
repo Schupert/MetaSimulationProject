@@ -149,7 +149,7 @@ for (i in Subj){
                   Study_mean <- log((x[3]/x[4])/(x[1]/x[2]))
                   Study_StanDev <- 1/x[1] + 1/x[2] + 1/x[3] + 1/x[4]
                   
-                  Begg_p <- pnorm(- Study_mean/(Study_StanDev))
+                  Begg_p <- pnorm(Study_mean/(Study_StanDev))
                   
                   Step_weight <- ifelse(Begg_p < Severity.boundary[1], 1, ifelse(Begg_p < Severity.boundary[2], 0.75, 0.25))
                   

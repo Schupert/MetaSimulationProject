@@ -54,7 +54,7 @@ Tested.outcomes <- 5
 Sd.split <- 0.6
 
 # Size of per unit bias increase
-Bias.multiple <- c(log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
+Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 
 ### Unstandardised mean differrence function
 
@@ -154,10 +154,9 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"),
           
           Normal.Simulation[dummy.counter, `:=` (Unique_ID = counter,
                                                  Study_n = Study.n, Study_estimate = Study_mean[1], 
-                                                 Study_sd = Study_StanDev[1], 
-                                                 Study_n = Study_patientnumber,
-                                                 Study_rejectedMeans = list(Study_mean)[-1],
-                                                 Study_rejectedSDs = list(Study_StanDev)[-1])]
+                                                 Study_sd = Study_StanDev[1],
+                                                 Study_rejectedMeans = list(Study_mean[-1]),
+                                                 Study_rejectedSDs = list(Study_StanDev[-1]))]
           
           dummy.counter <- dummy.counter + 1
           

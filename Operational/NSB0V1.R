@@ -54,7 +54,7 @@ Tested.outcomes <- 5
 Sd.split <- 0.6
 
 # Size of per unit bias increase
-Bias.multiple <- c(log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
+Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 
 ### Unstandardised mean differrence function
 

@@ -54,7 +54,7 @@ Tested.outcomes <- 5
 Sd.split <- 0.6
 
 # Size of per unit bias increase
-Bias.multiple <- c(log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
+Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 
 ### Unstandardised mean differrence function
 
@@ -148,7 +148,7 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"),
           ## Draw from binomial how many methodological concerns study has
           Number.of.biases <- rbinom(1, 2, 1/(Study_patientnumber^0.06))
           
-          Study_summary <- UMD(Study_patientnumber, k - Bias.multiple[Number.of.biases], l, controlProp, True.sd)
+          Study_summary <- UMD(Study_patientnumber, k - Bias.multiple[Number.of.biases + 1], l, controlProp, True.sd)
           Study_mean <- Study_summary[1]
           Study_StanDev <- Study_summary[2]
           Study.n <- as.integer(0.5*Study_patientnumber) * 2

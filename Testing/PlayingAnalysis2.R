@@ -18,22 +18,18 @@ Normal.Simulation <- data.table(Normal.Simulation)
 setkey(Normal.Simulation, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
 
 
-
 # Number of cores for parallel
 num.Cores <- detectCores() - 1
 c1 <- makeCluster(num.Cores)
 
-#### Declare variables
-
+### Set variables
 # Reps = number of repetitions of experiment
 Reps = 50
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
-#Studies = c(3,5,10,30)
 
-# subj = number of subjects in study, changed to first part of list for easier keying
-#Subj <- list(as.integer(c(60,60)), as.integer(c(30,40)), as.integer(c(250, 1000)), as.numeric(c(4.2, 1.1)))
+# subj = number of subjects in study, likely to be distributed
 Subj <- c(60, 20, 250, 4.2)
 
 # sd = study level standard deviation
@@ -52,13 +48,13 @@ controlProp = 0.5
 Severity.boundary <- c(0.05, 0.2)
 
 # Set up strength of publication bias selection IF STILL USING
-Begg_a <- 1.5
-Begg_b <- 4
+Begg_a <- 0.5
+Begg_b <- 3
+Begg_c <- -0.3
 Begg_sided <- 1
 
 # Set up within study reporting bias - this is now one sided
-Tested.outcomes <- 10
-Chosen.outcomes <- 1
+Tested.outcomes <- 5
 Sd.split <- 0.6
 
 # Size of per unit bias increase
@@ -70,10 +66,10 @@ StartTime <- proc.time()
 registerDoParallel(c1)
 
 r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"), 
-              .export = c("Studies", "Subj", "True.sd",
+              .export = c("Studies", "Subj", "True.sd", "Reps",
                           "theta", "tau.sq", "Normal.Simulation")
 ) %:% foreach (k = theta, .combine=rbind, .packages = c("data.table", "metafor"), 
-               .export = c("Studies", "Subj", "True.sd",
+               .export = c("Studies", "Subj", "True.sd", "Reps",
                            "theta", "tau.sq", "Normal.Simulation")
 ) %dopar% {
   # ID different for analysis
@@ -95,17 +91,17 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
     DL_se = numeric(length = ID),
     DL_tau2 = numeric(length = ID),
     DL_I2 = numeric(length = ID),
-HC_Estimate = numeric(length = ID),
-HC_se = numeric(length = ID),
-KH_REML_CIlb = numeric(length = ID),
+    HC_Estimate = numeric(length = ID),
+    HC_se = numeric(length = ID),
+    KH_REML_CIlb = numeric(length = ID),
   KH_REML_CIub = numeric(length = ID),
-  KH_REML_se = numeric(length = ID),
-  KH_DL_CIlb = numeric(length = ID),
-  KH_DL_CIub = numeric(length = ID),
-  KH_DL_se = numeric(length = ID),
-Doi_var = numeric(length = ID),
-Moreno_Estimate = numeric(length = ID),
-Mult_se = numeric(length = ID)
+    KH_REML_se = numeric(length = ID),
+    KH_DL_CIlb = numeric(length = ID),
+    KH_DL_CIub = numeric(length = ID),
+    KH_DL_se = numeric(length = ID),
+    Doi_var = numeric(length = ID),
+    Moreno_Estimate = numeric(length = ID),
+    Mult_se = numeric(length = ID)
   )
   dummy.counter <- 1
   
@@ -180,9 +176,6 @@ Mult_se = numeric(length = ID)
         ma.moren <- regtest(ma.fe , predictor = "vi", model = "lm")
         moreno.est <- ma.moren$fit[[5]][1]
         
-        ## Stanley v2 (PET-PEESE) simply takes Egger value if test value > 0.05, Moreno value if < 0.05
-        
-        ma.egger <- regtest(ma.fe , predictor = "sei", model = "lm")
         
       
         ## Mawdesley
@@ -204,27 +197,27 @@ Mult_se = numeric(length = ID)
         
         
         Normal.Sim.Results[dummy.counter, `:=` (Unique_ID = counter,
-                                                FE_Estimate = ma.fe[[1]],
+                                                FE_Estimate = ma.fe[[1]][1],
                                                 FE_se = ma.fe$se,
-                                                REML_Estimate = ma.reml$b,
+                                                REML_Estimate = ma.reml$b[1],
                                                 REML_se = ma.reml$se,
                                                 REML_tau2 = ma.reml$tau2,
-                                                DL_Estimate = ma.DL[[1]],
+                                                DL_Estimate = ma.DL[[1]][1],
                                                 DL_se = ma.DL$se,
                                                 DL_tau2 = ma.DL$tau2,
                                                 DL_I2 = ma.DL$I2,
                                                 HC_Estimate = ma.hc.DL$b,
                                                 HC_se = ma.hc.DL$se,
                                                 KH_REML_CIlb = ma.reml.kh$ci.lb,
-                                                  KH_REML_CIub = ma.reml.kh$ci.ub,
-                                                  KH_REML_se = ma.reml.kh$se,
-                                                  KH_DL_CIlb = ma.DL.kh$ci.lb,
-                                                  KH_DL_CIub = ma.DL.kh$ci.ub,
-                                                  KH_DL_se = ma.DL.kh$se,
+                                                KH_REML_CIub = ma.reml.kh$ci.ub,
+                                                KH_REML_se = ma.reml.kh$se,
+                                                KH_DL_CIlb = ma.DL.kh$ci.lb,
+                                                KH_DL_CIub = ma.DL.kh$ci.ub,
+                                                KH_DL_se = ma.DL.kh$se,
                                                 Doi_var = doi.var,
                                                 Moreno_Estimate = moreno.est,
                                                 Mult_se = ma.mult$se
-                                                  )]
+                                                )]
         
         
         dummy.counter <- dummy.counter + 1
@@ -248,12 +241,30 @@ Normal.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTaken <- proc.time() - StartTime
 
-write.csv(Normal.Sim.Results, file = "NormalSimAnalysis1.csv")
+#write.csv(Normal.Sim.Results, file = "NormalSimAnalysis1.csv")
 
 rm(r)
 
+### Checking values
+
+sum(is.na(Normal.Sim.Results))
+Normal.Sim.Results[is.na(Normal.Sim.Results$REML_Est)]
+
 # mean(as.vector(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533,.(DL_I2)]))
-# mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_I2)
-# mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.133]$DL_I2)
-# mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.007]$DL_I2)
-# mean(Normal.Sim.Results[Rep_theta == 1.5 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_tau2)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_I2)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.133]$DL_I2)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.007]$DL_I2)
+
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_tau2)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.133]$DL_tau2)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.007]$DL_tau2)
+
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_Est)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.133]$DL_Est)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.007]$DL_Est)
+
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_se)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.133]$DL_se)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.007]$DL_se)
+mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0]$DL_se)
+

@@ -234,7 +234,7 @@ Normal.Sim.Results <- r[order(Unique_ID)]
 ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * Reps * length(Studies)
 
 Normal.Sim.Results$Rep_Number =  rep(1:Reps, times = ID/Reps)
-Normal.Sim.Results$Rep_NumStudies = rep(Studies, times = ID/(Reps*length(Studies)))
+Normal.Sim.Results$Rep_NumStudies = rep(rep(Studies, each = Reps), times = ID/(Reps*length(Studies)))
 Normal.Sim.Results$Rep_tau.sq = rep(rep(tau.sq, each = Reps * length(Studies)), times = ID/(Reps*length(Studies)*length(tau.sq)))
 Normal.Sim.Results$Rep_theta = rep( rep(theta, each = Reps * length(Studies) * length(tau.sq)), times = length(Subj))
 Normal.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))

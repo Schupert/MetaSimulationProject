@@ -20,7 +20,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 30
+Reps = 15
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -135,10 +135,10 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"),
     Unique_ID = integer(length = ID),
     Study_G1O1 = numeric(length = ID),
     Study_G2O1 = numeric(length = ID),
-    Study_n = integer(length = ID)
-#     Study_rejectedMeans = list(length = ID),
-#     Study_rejectedSDs = list(length = ID),
-#     Study_Number.of.biases = integer(length = ID)
+    Study_n = integer(length = ID),
+        Study_rejectedMeans = list(length = ID),
+        Study_rejectedSDs = list(length = ID)
+    #     Study_Number.of.biases = integer(length = ID)
   )
   
   dummy.counter <- 1
@@ -146,13 +146,13 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"),
   for (l in tau.sq){
     
     for (j in EvFreq){
-    
+      
       for (n in Studies){
         
         for (o in 1:n){
           
           for (m in 1:Reps){
-
+            
             counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
                                     (match(k, theta)-1) * length(tau.sq) * length(EvFreq) * sum(Studies) * Reps +
                                     (match(l, tau.sq)-1) * length(EvFreq) * sum(Studies) * Reps +
@@ -168,13 +168,16 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"),
               Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 2)
             }
             
-            x <- Log_Odds_Ratio(Study_patientnumber, k, l, controlProp, j)
-            x.N <- 2*x[5]
+            x <- LogOR_mult_out(Study_patientnumber, k, l, controlProp, j, Sd.split, Tested.outcomes)
+            x.N <- 2*x[[5]]
             
             LogOR.Simulation[dummy.counter, `:=` (Unique_ID = counter,
-                                                  Study_G1O1 = x[1], 
-                                                  Study_G2O1 = x[3], 
-                                                  Study_n = x.N)]
+              Study_G1O1 = x[[1]][1], 
+              Study_G2O1 = x[[3]][1], 
+              Study_n = x.N,
+              Study_rej_G1O1 = list(x[[1]][-1]),
+              Study_rej_G2O1 = list(x[[3]][-1])
+            )]
             
             dummy.counter <- dummy.counter + 1
             
@@ -217,18 +220,19 @@ LogOR.Simulation[, Study_sd := ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5,
                                       sqrt(1/Study_G1O1 + 1/((Study_n/2 + 1) - Study_G1O1) + 1/Study_G2O1 + 1/((Study_n/2 + 1) - Study_G2O1)),
                                       sqrt(1/Study_G1O1 + 1/(Study_n/2 - Study_G1O1) + 1/Study_G2O1 + 1/(Study_n/2 - Study_G2O1)) )
                  ]
-TimeTakenSim <- proc.time() - StartTime
+TimeTaken <- proc.time() - StartTime
 
 stopCluster(c1)
 
-write.csv(LogOR.Simulation, file = "LSB0V1.csv")
+#write.csv(LogOR.Simulation, file = "LSBOutV1.csv")
 
-# df.LogOR.Simulation <- as.data.frame(LogOR.Simulation)
-# df.LogOR.Simulation$Study_rejectedMeans <- vapply(df.LogOR.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
-# df.LogOR.Simulation$Study_rejectedSDs <- vapply(df.LogOR.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
-# 
-# write.csv(df.LogOR.Simulation, file = "LSB0V1.csv")
+df.LogOR.Simulation <- as.data.frame(LogOR.Simulation)
+df.LogOR.Simulation$Study_rejectedMeans <- vapply(df.LogOR.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
+df.LogOR.Simulation$Study_rejectedSDs <- vapply(df.LogOR.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
+
+write.csv(df.LogOR.Simulation, file = "LSBOutV1.csv")
 rm(r)
+rm(df.LogOR.Simulation)
 
 ###### Analysis
 
@@ -489,7 +493,15 @@ LogOR.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTakenAnal <- proc.time() - StartTime
 
-write.csv(LogOR.Sim.Results, file = "LSB0V1An.csv")
+write.csv(LogOR.Sim.Results, file = "LSBOutV1An.csv")
 
 sum(is.na(LogOR.Sim.Results))
 head(LogOR.Sim.Results[is.na(REML_Estimate)])
+
+#setkey(LogOR.Simulation, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies", "Rep_ev_freq")
+
+#asdf1 <- LogOR.Simulation[J(5, 20, log(0.75), 0.04, 3, 0.1)]
+
+mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 3.04]$DL_Estimate)
+mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.04]$DL_Estimate)
+mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.01777778]$DL_Estimate)

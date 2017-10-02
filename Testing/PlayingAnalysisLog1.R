@@ -26,7 +26,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 30
+Reps = 15
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -339,7 +339,7 @@ TimeTaken <- proc.time() - StartTime
 write.csv(LogOR.Sim.Results, file = "LogORSimAnalysis1.csv")
 
 sum(is.na(LogOR.Sim.Results))
-head(LogOR.Sim.Results[is.na(Mult_se)])
+head(LogOR.Sim.Results[is.na(REML_Estimate)])
 
 # asdf <- LogOR.Simulation[Rep_Number == 8 & Rep_NumStudies == 5 & Rep_ev_freq == 0.1 & Rep_tau.sq == 0.04 & Rep_theta == log(4) & Rep_Subj == 4.7]
 # 
@@ -372,7 +372,9 @@ mean(LogOR.Sim.Results[Rep_theta == 0]$DL_Est)
 LogOR.Sim.Results[Rep_theta == 0, mean(DL_Estimate), by = .(Rep_tau.sq, Rep_Subj)]
 LogOR.Sim.Results[Rep_theta == 0, .(mean(DL_Estimate), mean(DL_tau2)), by = .(Rep_tau.sq, Rep_Subj)]
 
-asdf1 <- LogOR.Simulation[J(9, 4.7, log(1), 0.04, 3, 0.1)]
+#setkey(LogOR.Simulation, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies", "Rep_ev_freq")
+
+asdf1 <- LogOR.Simulation[J(16, 100, log(0.25), 0, 3, 0.1)]
 ma.fe <- rma.uni(asdf1$Study_estimate, asdf1$Study_sd^2 , method = "FE")
 
 dim(LogOR.Simulation[J(9, 4.7, log(1), 0.04, 3, 0.1)])[1] < 2

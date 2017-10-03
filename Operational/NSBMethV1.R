@@ -61,7 +61,7 @@ Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
   StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
   Group1Size <- as.integer(Control_Prop*StudySize)
-  Group2Size <- as.integer(StudySize - Group1Size)
+  Group2Size <- Group1Size
   ControlGroup <- rnorm(Group1Size, -StudyUMD/2, sd)
   TreatmentGroup <- rnorm(Group2Size, StudyUMD/2, sd)
   Studymean <- mean(TreatmentGroup) - mean(ControlGroup)

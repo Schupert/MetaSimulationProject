@@ -270,7 +270,12 @@ for (a in seq(0,1, 0.01) ){
 
 plot(dummy1, dummy2, ylim = c(0,1))
 abline(v = 0.05)
+title(xlab = "p-value", ylab = "Likelihood of publication")
 
+asdf <- data.frame(dummy1, dummy2, dummy3)
+
+ggplot(asdf, aes(x = dummy1, y = dummy2, colour = factor(dummy3))) + geom_line() + xlim(0,1) + ylim(0,1) + xlab("p-value") + ylab("Likelihood of publication") + 
+  labs(colour = "Sample size") + geom_vline(xintercept=0.05)
 
 ### Checking integrals
 

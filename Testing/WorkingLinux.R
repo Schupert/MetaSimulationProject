@@ -15,13 +15,14 @@ enableJIT(3)
 set.seed(123)
 
 # Number of cores for parallel
-num.Cores <- detectCores() - 1
+#num.Cores <- detectCores() - 1
+num.Cores <- 16
 c1 <- makeCluster(num.Cores)
 
 #### Declare variables ----
 
 # Reps = number of repetitions of experiment
-Reps = 30
+Reps = 1000
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -325,7 +326,7 @@ mod.hc <- function(object, digits, transf, targs, control, tau2est, ...) {
 
 ##### Parallel Loop Simulation ----
 
-rng <- RNGseq(length(Subj)*length(theta), 2345)
+rng <- RNGseq(length(Subj)*length(theta), 1234)
 
 StartTime <- proc.time()
 
@@ -386,31 +387,7 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"),
             }
             
             x <- Log_Odds_Ratio(Study_patientnumber, k, l, controlProp, j)
-            
-            ## With fixed sample size repeatedly simulates studies until one passes 
-            # selection by combined function on p and n, modelling publication bias
-            repeat{
-              
-              x <- Log_Odds_Ratio(Study_patientnumber, k, l, controlProp, j)
-              x.N <- 2*x[5]
-              
-              Study_mean <- ifelse(x[1] %% 1 == 0.5, 
-                                   log( (x[2] / ((x[5] + 1) - x[2]) ) / (x[1] / ((x[5] + 1) - x[1]) ) ),
-                                   log( (x[2] / ((x[5]) - x[2]) ) / (x[1] / ((x[5]) - x[1]) ) ) )
-              Study_StanDev <- ifelse(x[1] %% 1 == 0.5, 
-                                      sqrt(1/x[1] + 1/((x[5] + 1) - x[1]) + 1/x[2] + 1/((x[5] + 1) - x[2])),
-                                      sqrt(1/x[1] + 1/(x[5] - x[1]) + 1/x[2] + 1/(x[5] - x[2])))
-              
-              Begg_weight <-exp(
-                -Begg_b * (
-                  (Begg_sided * pnorm(Study_mean/(Study_StanDev))) 
-                  ^Begg_a  ) * (x.N ^ Begg_c)
-              ) 
-              
-              if(rbinom(1,1, Begg_weight) == 1 ){break}
-              
-            }
-            
+            x.N <- 2*x[5]
             
             LogOR.Simulation[dummy.counter, `:=` (Unique_ID = counter,
                                                   Study_G1O1 = x[1], 
@@ -462,13 +439,13 @@ TimeTakenSim <- proc.time() - StartTime
 
 stopCluster(c1)
 
-write.csv(LogOR.Simulation, file = "LSBBeggV1.csv")
+write.csv(LogOR.Simulation, file = "LSB0V1.csv")
 
 # df.LogOR.Simulation <- as.data.frame(LogOR.Simulation)
 # df.LogOR.Simulation$Study_rejectedMeans <- vapply(df.LogOR.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
 # df.LogOR.Simulation$Study_rejectedSDs <- vapply(df.LogOR.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
 # 
-# write.csv(df.LogOR.Simulation, file = "LSBBeggV1.csv")
+# write.csv(df.LogOR.Simulation, file = "LSB0V1.csv")
 rm(r)
 
 ##### Parallel Loop Analysis ----
@@ -722,14 +699,19 @@ LogOR.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTakenAn <- proc.time() - StartTime
 
-write.csv(LogOR.Sim.Results, file = "LSBBeggV1An.csv")
+write.csv(LogOR.Sim.Results, file = "LSB0V1An.csv")
 
 sum(is.na(LogOR.Sim.Results))
-head(LogOR.Sim.Results[is.na(REML_Estimate)])
-
-#### Timings ----
+# head(LogOR.Sim.Results[is.na(REML_Estimate)])
+# summary(LogOR.Sim.Results)
 
 TimeTakenTotal <- proc.time() - StartTimeTotal
+
+#### Ouput: Timings written to file and hopefully to output file ----
+
+fileConn <- file("Timings1.txt")
+writeLines(c(paste(TimeTakenSim), paste(TimeTakenAn), paste(TimeTakenTotal), object.size(LogOR.Simulation), object.size(LogOR.Sim.Results)), fileConn)
+close(fileConn)
 
 TimeTakenSim
 TimeTakenAn

@@ -27,7 +27,7 @@ if (length(regmatches(workingDirectory, gregexpr("/Results", workingDirectory)))
 #### Declare variables
 
 # Reps = number of repetitions of experiment
-Reps = 1000
+Reps = 100
 
 # k = number of studies in series
 Studies = c(1)
@@ -46,7 +46,7 @@ tau.sq = c(0)
 
 # ?need to state I.sq in advance?
 
-Tested.outcomes <- 100
+Tested.outcomes <- 1000
 Chosen.outcomes <- 1
 Sd.split <- 0.6
 
@@ -184,30 +184,30 @@ typeof(DT$b)
 typeof(DT[1]$b)
 
 #### Testing correlation
-Theta <- 0
-Heterogeneity <- 2
-Control_Prop <- 0.5
-StudySize <- 100000
-frac <- 0.5
-total.sd <- 3
-num.times <- 5
-
-
-StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
-Group1Size <- as.integer(Control_Prop*StudySize)
-Group2Size <- as.integer(StudySize - Group1Size)
-ControlGroup1 <- rnorm(Group1Size, 0, sqrt(frac) * total.sd)
-TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD, sqrt(frac) * total.sd)
-ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
-TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
-Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
-Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
-Begg_p <- pnorm(-Studymean/Studysd)
-
-output <- matrix(unlist(TreatmentGroupAll), ncol = 5)
-cor(output)
-output2 <- matrix(unlist(ControlGroupAll), ncol = 5)
-cor(output2)
+# Theta <- 0
+# Heterogeneity <- 2
+# Control_Prop <- 0.5
+# StudySize <- 100000
+# frac <- 0.5
+# total.sd <- 3
+# num.times <- 5
+# 
+# 
+# StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
+# Group1Size <- as.integer(Control_Prop*StudySize)
+# Group2Size <- as.integer(StudySize - Group1Size)
+# ControlGroup1 <- rnorm(Group1Size, 0, sqrt(frac) * total.sd)
+# TreatmentGroup1 <- rnorm(Group2Size, mean = StudyUMD, sqrt(frac) * total.sd)
+# ControlGroupAll <- replicate(num.times, rnorm(Group1Size, ControlGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
+# TreatmentGroupAll <- replicate(num.times, rnorm(Group2Size, TreatmentGroup1, sqrt(1-frac) * total.sd), simplify = FALSE)
+# Studymean <- sapply(TreatmentGroupAll, mean) - sapply(ControlGroupAll, mean)
+# Studysd <- sqrt( sapply(ControlGroupAll, var)/Group1Size + sapply(TreatmentGroupAll, var)/Group2Size )
+# Begg_p <- pnorm(-Studymean/Studysd)
+# 
+# output <- matrix(unlist(TreatmentGroupAll), ncol = 5)
+# cor(output)
+# output2 <- matrix(unlist(ControlGroupAll), ncol = 5)
+# cor(output2)
 
 ### Correlation of total simulation outputs ? wrong set up
 # output <- matrix(unlist(Normal.Simulation$Study_rejectedMeans), ncol = 1000)
@@ -217,12 +217,19 @@ cor(output2)
 #### Likely correct correlation set up, estimates show equal to first level sd plit = sd.split
 output <- matrix(unlist(Normal.Simulation$Study_rejectedMeans), ncol = Tested.outcomes, byrow = TRUE)
 dim(output)
-cor(output[1,], output[10,])
+cor(output[,1], output[,10])
 asdf <-cor(output)
 mean(asdf[lower.tri(asdf)])
 hist(asdf[lower.tri(asdf)])
 plot(output[,8], output[,6])
 abline(a = 0, b = 1)
+
+### Distribution of first draws
+hist(output[,1])
+mean(output[,1])
+sd(output[,1])
+sds <- apply(output, 2, sd)
+mean(sds)
 
 
 ### ? Is this correct - likely not

@@ -500,9 +500,8 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
     KH_DL_CIlb = numeric(length = ID),
     KH_DL_CIub = numeric(length = ID),
     KH_DL_se = numeric(length = ID),
-    IVHet_DL_var = numeric(length = ID),
-    IVHet_REML_var = numeric(length = ID),
     Moreno_Estimate = numeric(length = ID),
+    Moreno_se = numeric(length = ID),
     Mult_se = numeric(length = ID),
     Num_exc = integer(length = ID)
   )
@@ -555,9 +554,8 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
                                                    KH_DL_CIlb = NA,
                                                    KH_DL_CIub = NA,
                                                    KH_DL_se = NA,
-                                                   IVHet_DL_var = NA,
-                                                   IVHet_REML_var = NA,
                                                    Moreno_Estimate = NA,
+                                                   Moreno_se = NA,
                                                    Mult_se = NA,
                                                    Num_exc = Excluded.studies
             )]
@@ -674,7 +672,8 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
                                                    KH_DL_se = ma.DL.kh$se,
                                                    IVHet_DL_var = doi.var.DL,
                                                    IVHet_REML_var = doi.var.REML,
-                                                   Moreno_Estimate = moreno.est,
+                                                   Moreno_Estimate = moreno.est[1],
+                                                   Moreno_se = moreno.est[2],
                                                    Mult_se = ma.mult$se,
                                                    Num_exc = Excluded.studies
             )]

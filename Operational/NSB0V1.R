@@ -59,6 +59,45 @@ Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 
 #### Functions ----
 
+findvaluesNSim <- function(ID_num){
+  dummy1 = ID_num %% Reps
+  repetitions = ifelse(dummy1 == 0, Reps, dummy1)
+  
+  intermed <- Studies * Reps
+  intermed <- c(0,cumsum(intermed))
+  dummy2 = ID_num %% (Reps * sum(Studies))
+  numstudies = Studies[(min(which(intermed >= dummy2))-1)]
+  
+  dummy5 = ID_num %% (Reps * sum(Studies) * length(tau.sq))
+  dummy6 = ifelse(dummy5 == 0, length(tau.sq), (dummy5 %/% (Reps * sum(Studies))) + 1)
+  hetero = tau.sq[dummy6]
+  
+  dummy7 = ID_num %% (Reps * sum(Studies) * length(tau.sq) * length(theta))
+  dummy8 = ifelse(dummy7 == 0, length(theta), (dummy7 %/% (Reps * sum(Studies) * length(tau.sq))) + 1)
+  truevalue = theta[dummy8]
+  
+  dummy9 = ID_num %% (Reps * sum(Studies) * length(tau.sq) * length(theta) * length(Subj))
+  dummy10 = ifelse(dummy9 == 0, length(Subj), (dummy9 %/% (Reps * sum(Studies) * length(tau.sq) * length(theta))) + 1)
+  subjects <- tryCatch(Subj[[dummy10]][1], error = function(e) {try(Subj[dummy10], silent=TRUE)})
+  
+  return(list(reps = repetitions, subj = subjects, theta = truevalue, tau2 = hetero, numstud = numstudies))
+}
+
+findIDNSim <- function(repetitions, subjects, truevalue, hetero, numstudies){
+  IDnumber <- integer()
+  for (o in 1:numstudies){
+    counter.dummy <- as.integer((match(subjects, Subj)-1)  * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+                                  (match(truevalue, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
+                                  (match(hetero, tau.sq)-1) * sum(Studies) * Reps +
+                                  (sum(Studies[0:(match(numstudies, Studies)-1)]) + o -1) * Reps +
+                                  repetitions
+    )
+    IDnumber <- append(IDnumber, counter.dummy)
+  }
+  return(IDnumber)
+}
+
+
 ### Unstandardised mean differrence function
 
 UMD <- function(StudySize, Theta, Heterogeneity, Control_Prop, sd){
@@ -381,18 +420,18 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"),
 
 #### Need to then sort final table and add values for rep number, rep subj, rep theta, rep tau2, rep numstudies
 Normal.Simulation <- r[order(Unique_ID)]
-
-ID =  length(Subj) * length(theta) * length(tau.sq) * Reps * sum(Studies)
-Normal.Simulation$Rep_Number =  rep(1:Reps, times = ID/Reps)
-intermediate <- integer()
-for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
-Normal.Simulation$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
-Normal.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(tau.sq)))
-Normal.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)), times = length(Subj))
-
-### Create keyable vector for Subj
-Subj2 <- c(60, 20, 250, 4.2)
-Normal.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
+# 
+# ID =  length(Subj) * length(theta) * length(tau.sq) * Reps * sum(Studies)
+# Normal.Simulation$Rep_Number =  rep(1:Reps, times = ID/Reps)
+# intermediate <- integer()
+# for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
+# Normal.Simulation$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
+# Normal.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(tau.sq)))
+# Normal.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)), times = length(Subj))
+# 
+# ### Create keyable vector for Subj
+# Subj2 <- c(60, 20, 250, 4.2)
+# Normal.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
 
 TimeTakenSim <- proc.time() - StartTime
 
@@ -415,7 +454,7 @@ Subj <- c(60, 20, 250, 4.2)
 
 #Normal.Simulation <- read.csv("NormalSimulation1.csv")
 #Normal.Simulation <- data.table(Normal.Simulation)
-setkey(Normal.Simulation, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies")
+setkey(Normal.Simulation, "Unique_ID")
 
 
 StartTime <- proc.time()
@@ -424,10 +463,10 @@ registerDoParallel(c1)
 
 r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"), 
               .export = c("Studies", "Subj", "True.sd", "Reps",
-                          "theta", "tau.sq", "Normal.Simulation", "anyNA", ".psort", "mod.hc")
+                          "theta", "tau.sq", "Normal.Simulation", "anyNA", ".psort", "mod.hc", "findIDNSim")
 ) %:% foreach (k = theta, .combine=rbind, .packages = c("data.table", "metafor"), 
                .export = c("Studies", "Subj", "True.sd", "Reps",
-                           "theta", "tau.sq", "Normal.Simulation", "anyNA", ".psort", "mod.hc")
+                           "theta", "tau.sq", "Normal.Simulation", "anyNA", ".psort", "mod.hc", "findIDNSim")
 ) %dopar% {
   # ID different for analysis
   ID = length(tau.sq) * Reps * length(Studies)
@@ -455,9 +494,8 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
     KH_DL_CIlb = numeric(length = ID),
     KH_DL_CIub = numeric(length = ID),
     KH_DL_se = numeric(length = ID),
-    IVHet_DL_var = numeric(length = ID),
-    IVHet_REML_var = numeric(length = ID),
     Moreno_Estimate = numeric(length = ID),
+    Moreno_se = numeric(length = ID),
     Mult_se = numeric(length = ID)
   )
   dummy.counter <- 1
@@ -484,8 +522,10 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
                                 m
         )
         
+        find.temp.values <- findIDNSim(m, i, k, l, n)
+        
         ### Temporary data.table
-        temp.data <- Normal.Simulation[J(m, i, k, l, n)]
+        temp.data <- Normal.Simulation[J(find.temp.values)]
         
         #Fixed and random effects
         ma.fe <- tryCatch({
@@ -553,15 +593,10 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
                              , error = function(e){return(list(se = NA, ci.lb = NA, ci.ub = NA))
                              })
         
-        ## Doi
-        # estimate is equal to fixed effect, as are weights
-        doi.var.DL <- tryCatch(sum( ( as.vector(weights(ma.fe, type = "diagonal")/100)^2 ) * (temp.data$Study_sd^2 + ma.DL$tau2) ), error=function(err) NA)
-        doi.var.REML <- tryCatch(sum( ( as.vector(weights(ma.fe, type = "diagonal")/100)^2 ) * (temp.data$Study_sd^2 + ma.reml$tau2) ), error=function(err) NA)
-        
         ## Moreno (?D-var) - not exactly clear which implementation is being used is likely equation 2a
         moreno.est <- tryCatch({ma.moren <- regtest(ma.fe , predictor = "vi", model = "lm")
-        ma.moren$fit[[5]][1]
-        }, error=function(err) NA)
+        c(ma.moren$fit[[5]][1],ma.moren$fit[[5]][3])
+        }, error=function(err) c(NA,NA))
         
         ## Mawdesley
         
@@ -596,9 +631,8 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
                                                 KH_DL_CIlb = ma.DL.kh$ci.lb,
                                                 KH_DL_CIub = ma.DL.kh$ci.ub,
                                                 KH_DL_se = ma.DL.kh$se,
-                                                IVHet_DL_var = doi.var.DL,
-                                                IVHet_REML_var = doi.var.REML,
-                                                Moreno_Estimate = moreno.est,
+                                                Moreno_Estimate = moreno.est[1],
+                                                Moreno_se = moreno.est[2],
                                                 Mult_se = ma.mult$se
         )]
         

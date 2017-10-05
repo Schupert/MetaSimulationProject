@@ -458,9 +458,8 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
     KH_DL_CIlb = numeric(length = ID),
     KH_DL_CIub = numeric(length = ID),
     KH_DL_se = numeric(length = ID),
-    IVHet_DL_var = numeric(length = ID),
-    IVHet_REML_var = numeric(length = ID),
     Moreno_Estimate = numeric(length = ID),
+    Moreno_se = numeric(length = ID),
     Mult_se = numeric(length = ID)
   )
   dummy.counter <- 1
@@ -556,15 +555,10 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
                              , error = function(e){return(list(se = NA, ci.lb = NA, ci.ub = NA))
                              })
         
-        ## Doi
-        # estimate is equal to fixed effect, as are weights
-        doi.var.DL <- tryCatch(sum( ( as.vector(weights(ma.fe, type = "diagonal")/100)^2 ) * (temp.data$Study_sd^2 + ma.DL$tau2) ), error=function(err) NA)
-        doi.var.REML <- tryCatch(sum( ( as.vector(weights(ma.fe, type = "diagonal")/100)^2 ) * (temp.data$Study_sd^2 + ma.reml$tau2) ), error=function(err) NA)
-        
         ## Moreno (?D-var) - not exactly clear which implementation is being used is likely equation 2a
         moreno.est <- tryCatch({ma.moren <- regtest(ma.fe , predictor = "vi", model = "lm")
-        ma.moren$fit[[5]][1]
-        }, error=function(err) NA)
+        c(ma.moren$fit[[5]][1],ma.moren$fit[[5]][3])
+        }, error=function(err) c(NA,NA))
         
         ## Mawdesley
         
@@ -599,9 +593,8 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
                                                 KH_DL_CIlb = ma.DL.kh$ci.lb,
                                                 KH_DL_CIub = ma.DL.kh$ci.ub,
                                                 KH_DL_se = ma.DL.kh$se,
-                                                IVHet_DL_var = doi.var.DL,
-                                                IVHet_REML_var = doi.var.REML,
-                                                Moreno_Estimate = moreno.est,
+                                                Moreno_Estimate = moreno.est[1],
+                                                Moreno_se = moreno.est[2],
                                                 Mult_se = ma.mult$se
         )]
         

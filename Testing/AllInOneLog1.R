@@ -393,7 +393,7 @@ LogOR.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tabl
   # ID different for analysis
   ID = length(tau.sq) * Reps * length(Studies) * length(EvFreq)
   
-  LogOR.Sim.Results <- data.table(
+  LogOR.Sim <- data.table(
     Unique_ID = integer(length = ID),
     FE_Estimate = numeric(length = ID),
     FE_se = numeric(length = ID),
@@ -501,7 +501,7 @@ LogOR.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tabl
           Excluded.studies <- n - dim(temp.data)[1]
           
           if (dim(temp.data)[1] < 2){
-            LogOR.Sim.Results[dummy.counter, `:=` (Unique_ID = counter,
+            LogOR.Sim[dummy.counter, `:=` (Unique_ID = counter,
                                                    FE_Estimate = NA,
                                                    FE_se = NA,
                                                    REML_Estimate = NA,
@@ -617,7 +617,7 @@ LogOR.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tabl
               })
             
             
-            LogOR.Sim.Results[dummy.counter, `:=` (Unique_ID = counter,
+            LogOR.Sim[dummy.counter, `:=` (Unique_ID = counter,
                                                    FE_Estimate = ma.fe[[1]][1],
                                                    FE_se = ma.fe$se,
                                                    REML_Estimate = ma.reml$b[1],
@@ -653,7 +653,7 @@ LogOR.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tabl
       }
     }
   }
-  LogOR.Sim.Results
+  LogOR.Sim
 }
 
 stopCluster(c1)
@@ -676,7 +676,8 @@ LogOR.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTakenSim <- proc.time() - StartTime
 
-write.csv(LogOR.Simulation, file = "LSTotalV2.csv")
+#write.csv(LogOR.Sim.Results, file = "LSTotalV2.csv")
+saveRDS(LogOR.Sim.Results, file = "LSTotalV2RDS")
 
 #### Timings ----
 

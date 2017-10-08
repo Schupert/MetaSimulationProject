@@ -21,7 +21,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables ----
 
 # Reps = number of repetitions of experiment
-Reps = 10
+Reps = 5
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)

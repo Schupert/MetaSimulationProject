@@ -452,22 +452,6 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"),
 #### Need to then sort final table and add values for rep number, rep subj, rep theta, rep tau2, rep numstudies
 LogOR.Simulation <- r[order(Unique_ID)]
 
-# ID = total number of data points required, also used as an ID number. 
-ID =  length(Subj) * length(theta) * length(tau.sq) * length(EvFreq) * Reps * sum(Studies)
-
-# LogOR.Simulation$Rep_Number =  rep(1:Reps, times = ID/Reps)
-# intermediate <- integer()
-# for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
-# LogOR.Simulation$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
-# rm(intermediate)
-# LogOR.Simulation$Rep_ev_freq = rep(rep(EvFreq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(EvFreq)))
-# LogOR.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)*length(EvFreq)), times = ID/(Reps*sum(Studies)*length(tau.sq)*length(EvFreq)))
-# LogOR.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)*length(EvFreq)), times = length(Subj))
-# 
-# ### Create keyable vector for Subj
-# Subj2 <- c(100, 20, 250, 4.7)
-# LogOR.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
-
 ### Mean and sd
 
 LogOR.Simulation[, Study_estimate := ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5, 
@@ -483,13 +467,51 @@ TimeTakenSim <- proc.time() - StartTime
 
 stopCluster(c1)
 
-write.csv(LogOR.Simulation, file = "LSB0V1.csv")
+saveRDS(LogOR.Simulation, file = "LSB0V1RDS")
+
+# ID = total number of data points required, also used as an ID number. 
+ID =  length(Subj) * length(theta) * length(tau.sq) * length(EvFreq) * Reps * sum(Studies)
+
+LogOR.Simulation$Rep_Number =  rep(1:Reps, times = ID/Reps)
+intermediate <- integer()
+for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
+LogOR.Simulation$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
+rm(intermediate)
+LogOR.Simulation$Rep_ev_freq = rep(rep(EvFreq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(EvFreq)))
+LogOR.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)*length(EvFreq)), times = ID/(Reps*sum(Studies)*length(tau.sq)*length(EvFreq)))
+LogOR.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)*length(EvFreq)), times = length(Subj))
+
+### Create keyable vector for Subj
+Subj2 <- c(100, 20, 250, 4.7)
+LogOR.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
+
+setkey(LogOR.Simulation, "Rep_NumStudies")
+
+for (i in Studies){write.csv(LogOR.Simulation[J(i)], file = paste(i, "LSB0V1.csv"))}
+#write.csv(LogOR.Simulation, file = "LSB0V1.csv")
 
 # df.LogOR.Simulation <- as.data.frame(LogOR.Simulation)
 # df.LogOR.Simulation$Study_rejectedMeans <- vapply(df.LogOR.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
 # df.LogOR.Simulation$Study_rejectedSDs <- vapply(df.LogOR.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
 # 
 # write.csv(df.LogOR.Simulation, file = "LSB0V1.csv")
+
+#### Need to then sort final table and add values for rep number, rep subj, rep theta, rep tau2, rep numstudies
+LogOR.Simulation <- r[order(Unique_ID)]
+
+### Mean and sd
+
+LogOR.Simulation[, Study_estimate := ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5, 
+                                            log( (Study_G2O1 / ((Study_n/2 + 1) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2 + 1) - Study_G1O1) ) ),
+                                            log( (Study_G2O1 / ((Study_n/2) - Study_G2O1) ) / (Study_G1O1 / ((Study_n/2) - Study_G1O1) ) ) )
+                 ]
+
+LogOR.Simulation[, Study_sd := ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5, 
+                                      sqrt(1/Study_G1O1 + 1/((Study_n/2 + 1) - Study_G1O1) + 1/Study_G2O1 + 1/((Study_n/2 + 1) - Study_G2O1)),
+                                      sqrt(1/Study_G1O1 + 1/(Study_n/2 - Study_G1O1) + 1/Study_G2O1 + 1/(Study_n/2 - Study_G2O1)) )
+                 ]
+
+
 rm(r)
 
 ##### Parallel Loop Analysis ----
@@ -745,6 +767,8 @@ LogOR.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 TimeTakenAn <- proc.time() - StartTime
 
 write.csv(LogOR.Sim.Results, file = "LSB0V1An.csv")
+
+saveRDS(LogOR.Sim.Results, file = "LSB0V1AnRDS")
 
 sum(is.na(LogOR.Sim.Results))
 head(LogOR.Sim.Results[is.na(REML_Estimate)])

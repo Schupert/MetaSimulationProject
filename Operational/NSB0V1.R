@@ -1,3 +1,16 @@
+###########################
+# This script is set up to simulate unstandardised mean difference with no bias
+#
+# First it sets up relevant libraries, variables and functions
+# Then it simulates individual level data in the first parallel loop, then saves this out
+# Finally it loops again over all conditions to perform and saves the analysis
+#
+# To save disk space and write time, values on all the conditions are not saved with the study data,
+# but are captured in a Unique_ID (warning - there are 2 different IDs, one for simulation, another for analysis).
+#
+# To reduce loading time and disk space, output saved as RDS file not csv
+##########################
+
 ### Remove previous variables
 rm(list = ls())
 
@@ -21,7 +34,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables ----
 
 # Reps = number of repetitions of experiment
-Reps = 20
+Reps = 10
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -439,7 +452,8 @@ stopCluster(c1)
 
 rm(r)
 
-write.csv(Normal.Simulation, file = "NSB0V1.csv")
+#write.csv(Normal.Simulation, file = "NSB0V1.csv")
+saveRDS(Normal.Simulation, file = "NSB0V1")
 
 # df.Normal.Simulation <- as.data.frame(Normal.Simulation)
 # df.Normal.Simulation$Study_rejectedMeans <- vapply(df.Normal.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
@@ -658,7 +672,8 @@ Normal.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTakenAn <- proc.time() - StartTime
 
-write.csv(Normal.Sim.Results, file = "NSB0V1An.csv")
+#write.csv(Normal.Sim.Results, file = "NSB0V1An.csv")
+saveRDS(Normal.Sim.Results, file = "NSB0V1An")
 
 rm(r)
 

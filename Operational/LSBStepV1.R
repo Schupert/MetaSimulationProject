@@ -1,3 +1,18 @@
+###########################
+# This script is set up to simulate log odds ratios with publication bias determined by a step function on p.
+# The bias is implemented within the simulation loop, with studies rejected if they don't pass a binomial draw on
+# their likelihood of publication based on the step function. The study sample size is maintained.
+#
+# First it sets up relevant libraries, variables and functions
+# Then it simulates individual level data in the first parallel loop, then saves this out
+# Finally it loops again over all conditions to perform and saves the analysis
+#
+# To save disk space and write time, values on all the conditions are not saved with the study data,
+# but are captured in a Unique_ID (warning - there are 2 different IDs, one for simulation, another for analysis).
+#
+# To reduce loading time and disk space, output saved as RDS file not csv
+##########################
+
 ### Remove previous variables
 rm(list = ls())
 
@@ -21,7 +36,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables ----
 
 # Reps = number of repetitions of experiment
-Reps = 30
+Reps = 5
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -61,6 +76,49 @@ Sd.split <- 0.8
 Bias.multiple <- 0.9
 
 #### Functions ----
+
+findvaluesLogSim <- function(ID_num){
+  dummy1 = ID_num %% Reps
+  repetitions = ifelse(dummy1 == 0, Reps, dummy1)
+  
+  intermed <- Studies * Reps
+  intermed <- c(0,cumsum(intermed))
+  dummy2 = ID_num %% (Reps * sum(Studies))
+  numstudies = Studies[(min(which(intermed >= dummy2))-1)]
+  
+  dummy3 = ID_num %% (Reps * sum(Studies) * length(EvFreq))
+  dummy4 = ifelse(dummy3 == 0, length(EvFreq), (dummy3 %/% (Reps * sum(Studies))) + 1)
+  eventfreq = EvFreq[dummy4]
+  
+  dummy5 = ID_num %% (Reps * sum(Studies) * length(EvFreq) * length(tau.sq))
+  dummy6 = ifelse(dummy5 == 0, length(tau.sq), (dummy5 %/% (Reps * sum(Studies) * length(EvFreq))) + 1)
+  hetero = tau.sq[dummy6]
+  
+  dummy7 = ID_num %% (Reps * sum(Studies) * length(EvFreq) * length(tau.sq) * length(theta))
+  dummy8 = ifelse(dummy7 == 0, length(theta), (dummy7 %/% (Reps * sum(Studies) * length(EvFreq)* length(tau.sq))) + 1)
+  truevalue = theta[dummy8]
+  
+  dummy9 = ID_num %% (Reps * sum(Studies) * length(EvFreq) * length(tau.sq) * length(theta) * length(Subj))
+  dummy10 = ifelse(dummy9 == 0, length(Subj), (dummy9 %/% (Reps * sum(Studies) * length(EvFreq)* length(tau.sq) * length(theta))) + 1)
+  subjects <- tryCatch(Subj[[dummy10]][1], error = function(e) {try(Subj[dummy10], silent=TRUE)})
+  
+  return(list(reps = repetitions, subj = subjects, theta = truevalue, tau2 = hetero, numstud = numstudies, evfreq = eventfreq))
+}
+
+findIDLogSim <- function(repetitions, subjects, truevalue, hetero, numstudies, eventfreq){
+  IDnumber <- integer()
+  for (o in 1:numstudies){
+    counter.dummy <- as.integer((match(subjects, Subj)-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
+                                  (match(truevalue, theta)-1) * length(tau.sq) * length(EvFreq) * sum(Studies) * Reps +
+                                  (match(hetero, tau.sq)-1) * length(EvFreq) * sum(Studies) * Reps +
+                                  (match(eventfreq, EvFreq)-1) * sum(Studies) * Reps +
+                                  (sum(Studies[0:(match(numstudies, Studies)-1)]) + o -1) * Reps +
+                                  repetitions
+    )
+    IDnumber <- append(IDnumber, counter.dummy)
+  }
+  return(IDnumber)
+}
 
 ### Log_Odds_Ratio function
 
@@ -433,18 +491,18 @@ LogOR.Simulation <- r[order(Unique_ID)]
 # ID = total number of data points required, also used as an ID number. 
 ID =  length(Subj) * length(theta) * length(tau.sq) * length(EvFreq) * Reps * sum(Studies)
 
-LogOR.Simulation$Rep_Number =  rep(1:Reps, times = ID/Reps)
-intermediate <- integer()
-for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
-LogOR.Simulation$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
-rm(intermediate)
-LogOR.Simulation$Rep_ev_freq = rep(rep(EvFreq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(EvFreq)))
-LogOR.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)*length(EvFreq)), times = ID/(Reps*sum(Studies)*length(tau.sq)*length(EvFreq)))
-LogOR.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)*length(EvFreq)), times = length(Subj))
-
-### Create keyable vector for Subj
-Subj2 <- c(100, 20, 250, 4.7)
-LogOR.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
+# LogOR.Simulation$Rep_Number =  rep(1:Reps, times = ID/Reps)
+# intermediate <- integer()
+# for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
+# LogOR.Simulation$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
+# rm(intermediate)
+# LogOR.Simulation$Rep_ev_freq = rep(rep(EvFreq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(EvFreq)))
+# LogOR.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)*length(EvFreq)), times = ID/(Reps*sum(Studies)*length(tau.sq)*length(EvFreq)))
+# LogOR.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)*length(EvFreq)), times = length(Subj))
+# 
+# ### Create keyable vector for Subj
+# Subj2 <- c(100, 20, 250, 4.7)
+# LogOR.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
 
 ### Mean and sd
 
@@ -459,7 +517,8 @@ LogOR.Simulation[, Study_sd := ifelse(LogOR.Simulation$Study_G1O1 %% 1 == 0.5,
                  ]
 TimeTakenSim <- proc.time() - StartTime
 
-write.csv(LogOR.Simulation, file = "LSBStepV1.csv")
+saveRDS(LogOR.Simulation, file = "LSBStepV1")
+#write.csv(LogOR.Simulation, file = "LSBStepV1.csv")
 
 # df.LogOR.Simulation <- as.data.frame(LogOR.Simulation)
 # df.LogOR.Simulation$Study_rejectedMeans <- vapply(df.LogOR.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
@@ -476,8 +535,7 @@ Subj <- c(100, 20, 250, 4.7)
 
 #LogOR.Simulation <- read.csv("LSBStepV1.csv")
 #LogOR.Simulation <- data.table(LogOR.Simulation)
-setkey(LogOR.Simulation, "Rep_Number", "Rep_Subj", "Rep_theta", "Rep_tau.sq", "Rep_NumStudies", "Rep_ev_freq")
-
+setkey(LogOR.Simulation, "Unique_ID")
 
 StartTime <- proc.time()
 c1 <- makeCluster(num.Cores)
@@ -485,10 +543,10 @@ registerDoParallel(c1)
 
 r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"), 
               .export = c("Studies", "Subj", "True.sd", "Reps",
-                          "theta", "tau.sq", "EvFreq", "LogOR.Simulation", "anyNA", ".psort", "mod.hc")
+                          "theta", "tau.sq", "EvFreq", "LogOR.Simulation", "anyNA", ".psort", "mod.hc", "findIDLogSim")
 ) %:% foreach (k = theta, .combine=rbind, .packages = c("data.table", "metafor"), 
                .export = c("Studies", "Subj", "True.sd", "Reps",
-                           "theta", "tau.sq", "EvFreq", "LogOR.Simulation", "anyNA", ".psort", "mod.hc")
+                           "theta", "tau.sq", "EvFreq", "LogOR.Simulation", "anyNA", ".psort", "mod.hc", "findIDLogSim")
 ) %dopar% {
   # ID different for analysis
   ID = length(tau.sq) * Reps * length(Studies) * length(EvFreq)
@@ -541,8 +599,10 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
           )
           
           
+          find.temp.values <- findIDLogSim(m, i, k, l, n, j)
+          
           ### Temporary data.table
-          temp.data <- LogOR.Simulation[J(m, i, k, l, n, j)]
+          temp.data <- LogOR.Simulation[J(find.temp.values)]
           
           temp.data <- temp.data[ !((Study_G1O1 == 0.5 & Study_G2O1 == 0.5) | ( ((Study_n/2 + 1) - Study_G1O1) == 0.5 & ((Study_n/2 + 1) - Study_G2O1) == 0.5 ))]
           Excluded.studies <- n - dim(temp.data)[1]
@@ -718,7 +778,8 @@ LogOR.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTakenAn <- proc.time() - StartTime
 
-write.csv(LogOR.Sim.Results, file = "LSBStepV1An.csv")
+#write.csv(LogOR.Sim.Results, file = "LSBStepV1An.csv")
+saveRDS(LogOR.Sim.Results, file = "LSBStepV1An")
 
 sum(is.na(LogOR.Sim.Results))
 head(LogOR.Sim.Results[is.na(REML_Estimate)])

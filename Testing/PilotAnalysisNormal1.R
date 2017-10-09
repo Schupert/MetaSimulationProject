@@ -59,6 +59,8 @@ Sd.split <- 0.6
 # Size of per unit bias increase
 Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 
+#### Import data here ----
+
 system.time(Normal.Simulation <- readRDS(file = "NSB0V1RDS"))
 Normal.Simulation <- data.table(Normal.Simulation)
 
@@ -93,24 +95,42 @@ sum(is.na(Normal.Simulation))
 
 summary(Normal.Simulation)
 
-Normal.Simulation[, .(Estimate = mean(Study_estimate), SD = mean(Study_sd)), by = .(Rep_NumStudies, Rep_tau.sq, Rep_theta, Rep_Subj)]
+asdf <- Normal.Simulation[, .(Estimate = mean(Study_estimate), SD = mean(Study_sd)), by = .(Rep_NumStudies, Rep_tau.sq, Rep_theta, Rep_Subj)]
 
 Normal.Simulation[, .(Estimate = mean(Study_estimate), SD = mean(Study_sd)), by = .(Rep_NumStudies)]
 
 Normal.Simulation[, .(Estimate = mean(Study_estimate), SD = mean(Study_sd)), by = .(Rep_Subj)]
 
-### Why is sd(est) not similar to tau.sq?
-Normal.Simulation[, .(Estimate = mean(Study_estimate), SD = mean(Study_sd), SD.est = var(Study_estimate) - (mean(Study_sd)^2)), by = .(Rep_tau.sq)]
-
 Normal.Simulation[, .(Estimate = mean(Study_estimate), SD = mean(Study_sd)), by = .(Rep_theta)]
 
+Normal.Simulation[, .(Estimate = mean(Study_estimate), SD = mean(Study_sd)), by = .(Rep_tau.sq)]
 
+### SD(est) is equal to mean(sd) in condition of no heterogeneity
+Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0, .(Estimate = mean(Study_estimate), Est.S.E = mean(Study_sd), Var.out.minus.tau2 = sd(Study_estimate) ), by = .(Rep_Subj)]
+
+### This shows that variance is a combination of tau2 and sigma as expected
+Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 2.533, .(Estimate = mean(Study_estimate), Est.S.E = mean(Study_sd), Var.out.minus.tau2 = sqrt(var(Study_estimate) - 2.533) ), by = .(Rep_Subj)]
+
+Normal.Simulation[Rep_theta == 1.5 & Rep_tau.sq == 2.533, .(Estimate = mean(Study_estimate), Est.S.E = mean(Study_sd), Var.out.minus.tau2 = sqrt(var(Study_estimate) - 2.533) ), by = .(Rep_Subj)]
+
+
+#### Bias of estimates of effect
+Bias.values <- Normal.Simulation[, .(Bias = mean(Study_estimate) - Rep_theta), by = .(Rep_NumStudies, Rep_tau.sq, Rep_theta, Rep_Subj)]$Bias
+summary(Bias.values)
+hist(Bias.values)
+
+
+
+
+#### Get MCE from Outcome estimates
 
 ################## Slightly confused issue, these are more relevant for actual analysis of results
 
 ### Bias
 
 Normal.Simulation[, .(Bias = mean(Study_estimate) - Rep_theta), by = .(Rep_NumStudies, Rep_tau.sq, Rep_theta, Rep_Subj)]
+
+
 
 ### MSE - two different ways of calculating
 

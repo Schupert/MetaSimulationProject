@@ -1,3 +1,16 @@
+###########################
+# This script is set up to simulate log odds ratios with no bias
+#
+# First it sets up relevant libraries, variables and functions
+# Then it simulates individual level data in the first parallel loop, then saves this out
+# Finally it loops again over all conditions to perform and saves the analysis
+#
+# To save disk space and write time, values on all the conditions are not saved with the study data,
+# but are captured in a Unique_ID (warning - there are 2 different IDs, one for simulation, another for analysis).
+#
+# To reduce loading time and disk space, output saved as RDS file not csv
+##########################
+
 ### Remove previous variables
 rm(list = ls())
 
@@ -482,7 +495,8 @@ TimeTakenSim <- proc.time() - StartTime
 
 stopCluster(c1)
 
-write.csv(LogOR.Simulation, file = "LSB0V1.csv")
+saveRDS(LogOR.Simulation, file = "LSB0V1")
+#write.csv(LogOR.Simulation, file = "LSB0V1.csv")
 
 # df.LogOR.Simulation <- as.data.frame(LogOR.Simulation)
 # df.LogOR.Simulation$Study_rejectedMeans <- vapply(df.LogOR.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
@@ -743,7 +757,8 @@ LogOR.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTakenAn <- proc.time() - StartTime
 
-write.csv(LogOR.Sim.Results, file = "LSB0V1An.csv")
+#write.csv(LogOR.Sim.Results, file = "LSB0V1An.csv")
+saveRDS(LogOR.Sim.Results, file = "LSB0V1An")
 
 sum(is.na(LogOR.Sim.Results))
 head(LogOR.Sim.Results[is.na(REML_Estimate)])

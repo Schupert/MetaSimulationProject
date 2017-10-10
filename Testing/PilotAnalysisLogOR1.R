@@ -62,7 +62,7 @@ Bias.multiple <- 0.9
 
 ##### Import data here ----
 
-system.time(LogOR.Simulation <- readRDS(file = "LSBBeggV1"))
+system.time(LogOR.Simulation <- readRDS(file = "LSBMethV1"))
 LogOR.Simulation <- data.table(LogOR.Simulation)
 
 LogOR.Simulation[,c("Study_G1O1", "Study_G2O1") := NULL]
@@ -115,23 +115,25 @@ LogOR.Simulation[, .(Estimate = mean(Study_estimate), SD = mean(Study_sd)), by =
 LogOR.Simulation[, .(Estimate = mean(Study_estimate), SD = mean(Study_sd)), by = .(Rep_ev_freq)]
 
 ### SD(est) is equal to mean(sd) in condition of no heterogeneity
-LogOR.Simulation[Rep_theta == 0 & Rep_tau.sq == 0, .(Estimate = mean(Study_estimate), Est.S.E = mean(Study_sd), Var.out.minus.tau2 = sd(Study_estimate) ), by = .(Rep_Subj)]
+LogOR.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_ev_freq == 0.5, .(Estimate = mean(Study_estimate), Est.S.E = mean(Study_sd), Var.out.minus.tau2 = sd(Study_estimate) ), by = .(Rep_Subj)]
 
 ### This shows that variance is a combination of tau2 and sigma as expected
-LogOR.Simulation[Rep_theta == 0 & Rep_tau.sq == 3.04, .(Estimate = mean(Study_estimate), Est.S.E = mean(Study_sd), Var.out.minus.tau2 = sqrt(var(Study_estimate) - 3.04) ), by = .(Rep_Subj)]
+LogOR.Simulation[Rep_theta == 0 & Rep_tau.sq == 3.04 & Rep_ev_freq == 0.5, .(Estimate = mean(Study_estimate), Est.S.E = mean(Study_sd), Var.out.minus.tau2 = sqrt(var(Study_estimate) - 3.04) ), by = .(Rep_Subj)]
 
-LogOR.Simulation[Rep_theta == log(4) & Rep_tau.sq == 3.04, .(Estimate = mean(Study_estimate), Est.S.E = mean(Study_sd), Var.out.minus.tau2 = sqrt(var(Study_estimate) - 3.04) ), by = .(Rep_Subj)]
+LogOR.Simulation[Rep_theta == log(4) & Rep_tau.sq == 3.04 & Rep_ev_freq == 0.5, .(Estimate = mean(Study_estimate), Est.S.E = mean(Study_sd), Var.out.minus.tau2 = sqrt(var(Study_estimate) - 3.04) ), by = .(Rep_Subj)]
 
 ### Plots
 
 d <- ggplot(LogOR.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.7 & Rep_ev_freq == 0.5], aes(x = Study_sd^(-2), y = Study_estimate)) + theme_bw()
 d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
-  coord_flip(xlim = c(0,20)) + geom_hline(yintercept = theta[2]) +
+  coord_flip(xlim = c(0,70)) + geom_hline(yintercept = theta[3]) +
   scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted") 
+
+d + geom_density_2d() + geom_point(alpha = 1/100) + coord_cartesian(xlim = c(0,100))
 
 ### With increasing tausq
 
-d <- ggplot(LogOR.Simulation[Rep_theta == log(0) & Rep_tau.sq == tau.sq[4] & Rep_Subj == 4.7 & Rep_ev_freq == 0.5], aes(x = Study_sd^(-2), y = Study_estimate))+ theme_bw()
+d <- ggplot(LogOR.Simulation[Rep_theta == theta[4] & Rep_tau.sq == tau.sq[1] & Rep_Subj == 4.7 & Rep_ev_freq == 0.5], aes(x = Study_sd^(-2), y = Study_estimate))+ theme_bw()
 d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
   coord_flip(xlim = c(0,70)) + geom_hline(yintercept = log(0)) +
   scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted") 

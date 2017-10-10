@@ -139,7 +139,7 @@ UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd
   Y <- rCopula(Group1Size, y)
   TreatmentGroup <- qnorm(Y, mean = StudyUMD/2, sd = total.sd)
   Studymean <- apply(TreatmentGroup,2,mean) - apply(ControlGroup, 2, mean)
-  Studysd <- sqrt( (apply(TreatmentGroup, 2, var) * (Group1Size - 1) + apply(TreatmentGroup, 2, var) * (Group2Size-1))/ (Group1Size + Group2Size -2) )
+  Studysd <- sqrt( (apply(TreatmentGroup, 2, var) * (Group1Size - 1) + apply(TreatmentGroup, 2, var) * (Group2Size-1))/ (Group1Size + Group2Size -2) * (1/Group1Size + 1/Group2Size))
   Begg_p <- pnorm(Studymean/Studysd)
   return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
 }

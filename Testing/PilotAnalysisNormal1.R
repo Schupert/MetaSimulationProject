@@ -61,7 +61,7 @@ Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 
 #### Import data here ----
 
-system.time(Normal.Simulation <- readRDS(file = "NSB0V1RDS"))
+system.time(Normal.Simulation <- readRDS(file = "NSBStepV1"))
 Normal.Simulation <- data.table(Normal.Simulation)
 
 #### Need to then sort final table and add values for rep number, rep subj, rep theta, rep tau2, rep numstudies
@@ -85,7 +85,7 @@ Normal.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
 
 ### Is Unique ID stable
 
-identical(1:15840000, Normal.Simulation$Unique_ID)
+identical(1:dim(Normal.Simulation)[1], Normal.Simulation$Unique_ID)
 
 ### Number of NAs
 
@@ -119,8 +119,40 @@ Bias.values <- Normal.Simulation[, .(Bias = mean(Study_estimate) - Rep_theta), b
 summary(Bias.values)
 hist(Bias.values)
 
+#### Plot of curve
+
+a <- ggplot(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2], aes(x = Study_estimate, y = (1/(Study_sd^2)) )) 
+a + geom_point() + geom_smooth(data = Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2], aes(x = Study_estimate, y = (1/(Study_sd^2))), method = "lm", formula = x~y)
+
+b <- ggplot(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2], aes(y = Study_estimate, x = Study_sd^(-2) )) #+ xlim(0, 100) + ylim(-2,2)
+b + geom_point(alpha = 1/10) + geom_smooth(method = "lm")
+b + stat_density2d(aes(fill = ..level..), geom = "polygon",  contour = TRUE)  + geom_smooth(method = "lm") + xlim(0, 100) + ylim(-2,2) + coord_flip() + geom_hline(yintercept=0)
+b + stat_density2d(aes(fill = ..level..), geom = "polygon",  contour = TRUE)  + geom_smooth(span = 0.8) + xlim(0, 100) + ylim(-2,2) + coord_flip() + geom_hline(yintercept=0)
+
+b + geom_density2d()
+
+## Testing with tau2
+
+b <- ggplot(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 2.533 & Rep_Subj == 4.2], aes(y = Study_estimate, x = Study_sd^(-2) )) #+ xlim(0, 100) + ylim(-2,2)
+b + geom_point(alpha = 1/10) + geom_smooth(method = "lm") + coord_flip()
+b + stat_density2d(aes(fill = ..level..), geom = "polygon",  contour = TRUE)  + geom_smooth(method = "lm") + xlim(0, 100) + ylim(-2,2) + coord_flip() + geom_hline(yintercept=0)
+b + stat_density2d(aes(fill = ..level..), geom = "polygon",  contour = TRUE)  + geom_smooth(span = 0.8) + xlim(0, 100) + ylim(-2,2) + coord_flip() + geom_hline(yintercept=0)
 
 
+## Testing with effect size difference
+
+b <- ggplot(Normal.Simulation[Rep_theta == -0.3 & Rep_tau.sq == 0.133 & Rep_Subj == 4.2], aes(y = Study_estimate, x = Study_sd^(-2) )) + theme_bw()#+ xlim(0, 100) + ylim(-2,2)
+b + geom_point(alpha = 1/10) + geom_smooth(method = "lm") + coord_flip()
+
+b + stat_density2d(aes(fill = ..level..), geom = "raster",  contour = TRUE)  + geom_smooth(method = "lm") + xlim(0, 100) + ylim(-2,2) +
+  coord_flip() + geom_hline(yintercept=-0.3) #+ scale_fill_gradient(limits = c(1, 10), low = 'gray80', high = 'gray20')
+
+b + stat_density2d(aes(fill = ..level..), geom = "polygon",  contour = TRUE)  + geom_smooth(span = 0.8) + xlim(0, 100) + ylim(-2,2) + coord_flip() + geom_hline(yintercept=0.3)
+
+
+
+summary(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2])
+summary(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2]$Study_sd^(-2) )
 
 #### Get MCE from Outcome estimates
 

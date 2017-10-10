@@ -61,7 +61,7 @@ Bias.multiple <- 0.9
 
 ##### Import data here ----
 
-system.time(LogOR.Simulation <- readRDS(file = "LSB0V1RDS"))
+system.time(LogOR.Simulation <- readRDS(file = "LSB0v1RDS"))
 LogOR.Simulation <- data.table(LogOR.Simulation)
 
 LogOR.Simulation[,c("Study_G1O1", "Study_G2O1") := NULL]

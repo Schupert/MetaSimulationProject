@@ -61,7 +61,11 @@ Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
 
 #### Import data here ----
 
+<<<<<<< HEAD
 system.time(Normal.Simulation <- readRDS(file = "NSBStepV1"))
+=======
+system.time(Normal.Simulation <- readRDS(file = "NSBOutV1"))
+>>>>>>> 8438da184c46c8f55db91ab230bad616e31dc9f8
 Normal.Simulation <- data.table(Normal.Simulation)
 
 #### Need to then sort final table and add values for rep number, rep subj, rep theta, rep tau2, rep numstudies
@@ -119,7 +123,34 @@ Bias.values <- Normal.Simulation[, .(Bias = mean(Study_estimate) - Rep_theta), b
 summary(Bias.values)
 hist(Bias.values)
 
+<<<<<<< HEAD
 #### Plot of curve
+=======
+### Plots
+
+d <- ggplot(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2], aes(x = Study_sd^(-2), y = Study_estimate)) + theme_bw()
+d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
+  coord_flip(xlim = c(0,10)) + geom_hline(yintercept = theta[3]) +
+  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted") + xlim(0,5)
+
+d + geom_point(alpha = 1/100) + coord_cartesian(xlim = c(0, 20))
+d + geom_density_2d() + geom_point(alpha = 1/100) + xlim(0,20)
+
+### Increasing tau2
+
+d <- ggplot(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == tau.sq[4] & Rep_Subj == 4.2], aes(x = Study_sd^(-2), y = Study_estimate)) + theme_bw()
+d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
+  coord_flip(xlim = c(0,70)) + geom_hline(yintercept = theta[3]) +
+  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted")
+
+### Opposing direction
+
+d <- ggplot(Normal.Simulation[Rep_theta == theta[5] & Rep_tau.sq == tau.sq[4] & Rep_Subj == 4.2], aes(x = Study_sd^(-2), y = Study_estimate)) + theme_bw()
+d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
+  coord_flip(xlim = c(0,80)) + geom_hline(yintercept = theta[5]) +
+  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted")
+
+>>>>>>> 8438da184c46c8f55db91ab230bad616e31dc9f8
 
 a <- ggplot(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2], aes(x = Study_estimate, y = (1/(Study_sd^2)) )) 
 a + geom_point() + geom_smooth(data = Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2], aes(x = Study_estimate, y = (1/(Study_sd^2))), method = "lm", formula = x~y)

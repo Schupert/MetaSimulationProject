@@ -123,27 +123,40 @@ hist(Bias.values)
 
 d <- ggplot(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2], aes(x = Study_sd^(-2), y = Study_estimate)) + theme_bw()
 d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
-  coord_flip(xlim = c(0,10)) + geom_hline(yintercept = theta[3]) +
-  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted") + xlim(0,5)
+  coord_flip(xlim = c(0,100)) + geom_hline(yintercept = theta[3]) +
+  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted") 
 
-d + geom_point(alpha = 1/100) + coord_cartesian(xlim = c(0, 20))
-d + geom_density_2d() + geom_point(alpha = 1/100) + xlim(0,20)
+d + geom_point(alpha = 1/100) #+ coord_cartesian(xlim = c(0, 20))
+d + geom_density_2d() + geom_point(alpha = 1/100) + coord_cartesian(xlim = c(0, 300)) 
+d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE) + coord_cartesian(xlim = c(0, 300)) 
 
 ### Increasing tau2
 
 d <- ggplot(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == tau.sq[4] & Rep_Subj == 4.2], aes(x = Study_sd^(-2), y = Study_estimate)) + theme_bw()
 d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
   coord_flip(xlim = c(0,70)) + geom_hline(yintercept = theta[3]) +
-  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted")
+  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted") 
+
+## Lowess
+
+d <- ggplot(Normal.Simulation[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[1] & Rep_Subj == 4.2], aes(x = Study_sd^(-2), y = Study_estimate)) + theme_bw()
+d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
+  coord_flip(xlim = c(0,70)) + geom_hline(yintercept = theta[3]) +
+  scale_fill_gradient(low="grey", high="black") + geom_smooth( colour = "black", linetype = "dotted") 
 
 ### Opposing direction
 
 d <- ggplot(Normal.Simulation[Rep_theta == theta[5] & Rep_tau.sq == tau.sq[4] & Rep_Subj == 4.2], aes(x = Study_sd^(-2), y = Study_estimate)) + theme_bw()
 d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
   coord_flip(xlim = c(0,80)) + geom_hline(yintercept = theta[5]) +
-  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted")
+  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted") 
 
+## Small opposite effect
 
+d <- ggplot(Normal.Simulation[Rep_theta == theta[4] & Rep_tau.sq == tau.sq[3] & Rep_Subj == 4.2], aes(x = Study_sd^(-2), y = Study_estimate)) + theme_bw()
+d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
+  coord_flip(xlim = c(0,80)) + geom_hline(yintercept = theta[4]) +
+  scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted") 
 
 
 #### Get MCE from Outcome estimates

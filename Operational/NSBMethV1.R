@@ -48,7 +48,7 @@ Subj <- list(as.integer(c(60,60)), as.integer(c(20,100)), as.integer(c(250, 1000
 True.sd = sqrt(2)
 
 # theta = population level mean - need good sense of range for SMD
-theta = c(-1.5, -0.3, 0, 0.3, 1.5)
+theta = c(-1.53, -0.25, 0, 0.25, 1.53)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(0, 0.007, 0.133, 2.533)
@@ -70,7 +70,7 @@ Tested.outcomes <- 5
 Sd.split <- 0.6
 
 # Size of per unit bias increase
-Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
+Bias.multiple <- c(0, log(0.85)/(-1.81) * 2, log(0.7225)/(-1.81) * 2)
 
 #### Functions ----
 
@@ -411,7 +411,7 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"),
           }
           
           ## Draw from binomial how many methodological concerns study has
-          Number.of.biases <- rbinom(1, 2, 1/(Study_patientnumber^0.06))
+          Number.of.biases <- rbinom(1, 2, 1/(Study_patientnumber^0.3))
           
           Study_summary <- UMD(Study_patientnumber, k - Bias.multiple[Number.of.biases + 1], l, controlProp, True.sd)
           Study_mean <- Study_summary[1]

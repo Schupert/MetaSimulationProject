@@ -33,7 +33,7 @@ Subj <- list(as.integer(c(100,100)), as.integer(c(20,100)), as.integer(c(250, 10
 True.sd = sqrt(2)
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
-theta = c(log(0.25), log(0.75), log(1), log(1.5), log(4))
+theta = c(log(0.25), log(0.8), log(1), log(1.25), log(4))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw)
 tau.sq = c(0, 0.01777778, 0.04, 3.04)
@@ -58,15 +58,12 @@ Tested.outcomes <- 5
 Sd.split <- 0.8
 
 # Size of per unit bias increase
-Bias.multiple <- 0.9
+Bias.multiple <- 0.85
 
 ##### Import data here ----
 
-<<<<<<< HEAD
-system.time(LogOR.Simulation <- readRDS(file = "LSB0v1RDS"))
-=======
-system.time(LogOR.Simulation <- readRDS(file = "LSBMethV1"))
->>>>>>> 8438da184c46c8f55db91ab230bad616e31dc9f8
+system.time(LogOR.Simulation <- readRDS(file = "LSBOutV1"))
+
 LogOR.Simulation <- data.table(LogOR.Simulation)
 
 LogOR.Simulation[,c("Study_G1O1", "Study_G2O1") := NULL]

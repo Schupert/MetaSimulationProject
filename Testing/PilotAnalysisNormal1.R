@@ -35,7 +35,7 @@ Subj <- list(as.integer(c(60,60)), as.integer(c(20,100)), as.integer(c(250, 1000
 True.sd = sqrt(2)
 
 # theta = population level mean - need good sense of range for SMD
-theta = c(-1.5, -0.3, 0, 0.3, 1.5)
+theta = c(-1.53, -0.25, 0, 0.25, 1.53)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(0, 0.007, 0.133, 2.533)
@@ -57,7 +57,7 @@ Tested.outcomes <- 5
 Sd.split <- 0.6
 
 # Size of per unit bias increase
-Bias.multiple <- c(0, log(0.9)/(-1.81) * 2, log(0.81)/(-1.81) * 2)
+Bias.multiple <- c(0, log(0.85)/(-1.81) * 2, log(0.7225)/(-1.81) * 2)
 
 #### Import data here ----
 
@@ -131,7 +131,7 @@ d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE)  +
   coord_flip(xlim = c(0,100)) + geom_hline(yintercept = theta[3]) +
   scale_fill_gradient(low="grey", high="black") + geom_smooth(method = "lm", colour = "black", linetype = "dotted") 
 
-d + geom_point(alpha = 1/100) #+ coord_cartesian(xlim = c(0, 20))
+d + geom_point(alpha = 1/100) + geom_smooth(colour = "black", linetype = "dotted") #+ coord_cartesian(xlim = c(0, 20))
 d + geom_density_2d() + geom_point(alpha = 1/100) + coord_cartesian(xlim = c(0, 300)) 
 d + stat_density_2d(aes(fill = ..level..), geom = "polygon", contour = TRUE) + coord_cartesian(xlim = c(0, 300)) 
 

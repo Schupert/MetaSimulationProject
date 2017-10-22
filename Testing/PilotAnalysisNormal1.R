@@ -62,7 +62,7 @@ Bias.multiple <- c(0, log(0.85)/(-1.81) * 2, log(0.7225)/(-1.81) * 2)
 #### Import data here ----
 
 
-system.time(Normal.Simulation <- readRDS(file = "NSBMethV1"))
+system.time(Normal.Simulation <- readRDS(file = "NSB0V1"))
 
 Normal.Simulation <- data.table(Normal.Simulation)
 
@@ -198,23 +198,96 @@ summary(Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2]$St
 
 #### Get MCE from Outcome estimates
 
-################## Slightly confused issue, these are more relevant for actual analysis of results
+################## Heat maps
 
-### Bias
-
-Normal.Simulation[, .(Bias = mean(Study_estimate) - Rep_theta), by = .(Rep_NumStudies, Rep_tau.sq, Rep_theta, Rep_Subj)]
+#### Import data here ----
 
 
+system.time(Normal.Simulation2 <- readRDS(file = "NSBMethV1"))
 
-### MSE - two different ways of calculating
+Normal.Simulation2 <- data.table(Normal.Simulation2)
 
-Normal.Simulation[, .(MSE = mean((Study_estimate - Rep_theta)^2)), by = .(Rep_NumStudies, Rep_tau.sq, Rep_theta, Rep_Subj)]
+#### Need to then sort final table and add values for rep number, rep subj, rep theta, rep tau2, rep numstudies
+Normal.Simulation2 <- Normal.Simulation2[order(Unique_ID)]
 
-Normal.Simulation[, .(MSE = (mean(Study_estimate) - Rep_theta) + var(Study_estimate)), by = .(Rep_NumStudies, Rep_tau.sq, Rep_theta, Rep_Subj)]
+ID =  length(Subj) * length(theta) * length(tau.sq) * Reps * sum(Studies)
+Normal.Simulation2$Rep_Number =  rep(1:Reps, times = ID/Reps)
+intermediate <- integer()
+for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
+Normal.Simulation2$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
+Normal.Simulation2$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(tau.sq)))
+Normal.Simulation2$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)), times = length(Subj))
 
+### Create keyable vector for Subj
+Subj2 <- c(60, 20, 250, 4.2)
+Normal.Simulation2$Rep_Subj = rep(Subj2, each = ID / length(Subj))
 
-#### Selected for fixed sample size
+# y = Study_estimate, x = Study_sd^(-2)
 
-Normal.Simulation[Rep_Subj == 60, .(Bias = mean(Study_estimate) - Rep_theta), by = .(Rep_NumStudies, Rep_tau.sq, Rep_theta)]
+library(reshape2) # For melt function
+library(MASS)
+library(scales)
 
-ggplot(Normal.Simulation[Rep_Subj == 60], aes(Rep_tau.sq, (Bias = mean(Study_estimate) - Rep_theta)))
+den1 <- Normal.Simulation[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2]
+den2 <- Normal.Simulation2[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2]
+
+rm(Normal.Simulation2)
+
+# Calculate the common x and y range for geyser1 and geyser2
+xrng = range(c(den1$Study_sd, den2$Study_sd))
+yrng = range(c(den1$Study_estimate, den2$Study_estimate))
+
+# Calculate the 2d density estimate over the common range
+d1 = kde2d(den1$Study_sd, den1$Study_estimate, lims=c(xrng, yrng), n=500)
+d2 = kde2d(den2$Study_sd, den2$Study_estimate, lims=c(xrng, yrng), n=500)
+
+# Confirm that the grid points for each density estimate are identical
+identical(d1$x, d2$x) # TRUE
+identical(d1$y, d2$y) # TRUE
+
+# Calculate the difference between the 2d density estimates
+diff12 = d1 
+diff12$z = d2$z - d1$z
+
+## Melt data into long format
+# First, add row and column names (x and y grid values) to the z-value matrix
+rownames(diff12$z) = diff12$x
+colnames(diff12$z) = diff12$y
+
+# Now melt it to long format
+diff12.m = melt(diff12$z, id.var=rownames(diff12))
+names(diff12.m) = c("SE","Estimate","z")
+
+## Plot difference between geyser2 and geyser1 density
+# ggplot(diff12.m, aes(SE, Estimate, z=z, fill=z)) +
+#   geom_tile() +
+#   stat_contour(aes(colour=..level..), binwidth=0.001) +
+#   scale_fill_gradient2(low="red",mid="white", high="blue", midpoint=0) +
+#   scale_colour_gradient2(low=muted("red"), mid="white", high=muted("blue"), midpoint=0)  +
+#   coord_flip(xlim=c(1, 0), ylim=c(-2,2)) +
+#   guides(colour=FALSE)  + geom_hline(yintercept=0) + scale_x_reverse()
+
+ggplot(diff12.m, aes(Estimate, SE, z=z, fill=z)) +
+  geom_tile() +
+  stat_contour(aes(colour=..level..), binwidth=0.1) +
+  scale_fill_gradient2(low="red",mid="white", high="blue", midpoint=0) +
+  scale_colour_gradient2(low=muted("red"), mid="white", high=muted("blue"), midpoint=0)  + 
+  coord_cartesian(xlim = c(-1.5,1.5), ylim = c(0, 0.5)) + 
+  guides(colour=FALSE)  + geom_vline(xintercept=0) + scale_y_reverse() +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+#### Copy from online
+## Plot difference between geyser2 and geyser1 density
+# ggplot(diff12.m, aes(SE, Estimate, z=z, fill=z)) +
+#   geom_tile() +
+#   stat_contour(aes(colour=..level..), binwidth=0.001) +
+#   scale_fill_gradient2(low="red",mid="white", high="blue", midpoint=0) +
+#   scale_colour_gradient2(low=muted("red"), mid="white", high=muted("blue"), midpoint=0) +
+#   coord_cartesian(xlim=c(0,1), ylim=yrng) +
+#   guides(colour=FALSE)
+

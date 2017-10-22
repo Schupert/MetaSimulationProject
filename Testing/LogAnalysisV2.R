@@ -110,8 +110,8 @@ Bias.values <- melt(Bias.values, id = c("Rep_theta", "Rep_NumStudies"))
 
 ### Bias plot
 
-bias.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Bias.values)
-bias.plot <- ggplot(Bias.values, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + xlab("Coverage") + ylab("Number of studies") + scale_colour_grey()
+bias.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Bias.values) + xlab("Number of Studies") + ylab("Bias")
+bias.plot <- ggplot(Bias.values, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + xlab("Number of Studies") + ylab("Bias") + scale_colour_grey()
 bias.plot
 
 #### MSE ----
@@ -122,8 +122,8 @@ MSE1.values <- An.Cond[, .(FE = mean((FE_Estimate - Rep_theta)^2), REML = mean((
 
 MSE1.values <- melt(MSE1.values, id = c("Rep_theta", "Rep_NumStudies"))
 
-MSE1.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = MSE1.values) + coord_cartesian(ylim = c(0, 0.1))
-MSE1.plot <- ggplot(MSE1.values, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + xlab("Coverage") + ylab("Number of studies") + scale_colour_grey()
+MSE1.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = MSE1.values) + coord_cartesian(ylim = c(0, 0.1)) + xlab("Number of Studies") + ylab("MSE")
+MSE1.plot <- ggplot(MSE1.values, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + xlab("Number of Studies") + ylab("MSE") + scale_colour_grey()
 MSE1.plot
 
 MSE2.values <- An.Cond[, .(FE = (mean(FE_Estimate) - Rep_theta) + var(FE_Estimate), REML = (mean(REML_Estimate, na.rm = TRUE) - Rep_theta) + var(REML_Estimate, na.rm = TRUE),
@@ -149,7 +149,7 @@ by = .(Rep_theta, Rep_NumStudies)]
 
 Coverage.values2 <- melt(Coverage.values, id = c("Rep_theta", "Rep_NumStudies"))
 
-Coverage.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Coverage.values2)
+Coverage.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Coverage.values2) + xlab("Coverage") + ylab("Number of studies")
 Coverage.plot <- ggplot(Coverage.values2, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + xlab("Coverage") + ylab("Number of studies") + scale_colour_grey()
 Coverage.plot
 

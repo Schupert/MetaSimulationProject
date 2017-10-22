@@ -65,7 +65,7 @@ CI.betw <- function(a, b, c){
 
 #### Import data here ----
 
-system.time(LogOR.Sim.Results <- readRDS(file = "LSTotalV2RDS"))
+system.time(LogOR.Sim.Results <- readRDS(file = "LSBOutV1An"))
 
 LogOR.Sim.Results <- data.table(LogOR.Sim.Results)
 
@@ -75,7 +75,7 @@ LogOR.Sim.Results <- data.table(LogOR.Sim.Results)
 sig.level <- (1 - 0.05/2)
 
 #An.Cond <- LogOR.Sim.Results[Rep_theta == 0 & Rep_tau.sq == 0 & Rep_Subj == 4.2 & Rep_NumStudies == 100]
-An.Cond <- LogOR.Sim.Results[Rep_theta == log(0) & Rep_tau.sq == 0 & Rep_Subj == 4.7]
+An.Cond <- LogOR.Sim.Results[Rep_theta == log(1) & Rep_tau.sq == 0 & Rep_Subj == 4.70 & Rep_ev_freq == 0.5]
 
 ## There may be cleaner way to do this with data.table
 An.Cond$FE_CIlb <- An.Cond$FE_Estimate - qnorm(sig.level) * An.Cond$FE_se
@@ -111,6 +111,7 @@ Bias.values <- melt(Bias.values, id = c("Rep_theta", "Rep_NumStudies"))
 ### Bias plot
 
 bias.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Bias.values)
+bias.plot <- ggplot(Bias.values, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + xlab("Coverage") + ylab("Number of studies") + scale_colour_grey()
 bias.plot
 
 #### MSE ----
@@ -122,6 +123,7 @@ MSE1.values <- An.Cond[, .(FE = mean((FE_Estimate - Rep_theta)^2), REML = mean((
 MSE1.values <- melt(MSE1.values, id = c("Rep_theta", "Rep_NumStudies"))
 
 MSE1.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = MSE1.values) + coord_cartesian(ylim = c(0, 0.1))
+MSE1.plot <- ggplot(MSE1.values, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + xlab("Coverage") + ylab("Number of studies") + scale_colour_grey()
 MSE1.plot
 
 MSE2.values <- An.Cond[, .(FE = (mean(FE_Estimate) - Rep_theta) + var(FE_Estimate), REML = (mean(REML_Estimate, na.rm = TRUE) - Rep_theta) + var(REML_Estimate, na.rm = TRUE),
@@ -130,7 +132,7 @@ MSE2.values <- An.Cond[, .(FE = (mean(FE_Estimate) - Rep_theta) + var(FE_Estimat
 
 MSE2.values <- melt(MSE2.values, id = c("Rep_theta", "Rep_NumStudies"))
 
-MSE2.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = MSE2.values) + coord_cartesian(ylim = c(0, 0.1))
+MSE2.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = MSE2.values) #+ coord_cartesian(ylim = c(-0.1, 0.1))
 MSE2.plot
 
 #### Coverage ---- 
@@ -145,13 +147,14 @@ Coverage.values <- An.Cond[, .(FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), n
 ),
 by = .(Rep_theta, Rep_NumStudies)]
 
-Coverage.values <- melt(Coverage.values, id = c("Rep_theta", "Rep_NumStudies"))
+Coverage.values2 <- melt(Coverage.values, id = c("Rep_theta", "Rep_NumStudies"))
 
-Coverage.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Coverage.values)
+Coverage.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Coverage.values2)
+Coverage.plot <- ggplot(Coverage.values2, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + xlab("Coverage") + ylab("Number of studies") + scale_colour_grey()
 Coverage.plot
 
 
 #### Testing stargazer -----
 
 
-stargazer(Coverage.values[, -1, with = FALSE ], summary = FALSE)
+stargazer(Coverage.values[, -1, with = FALSE], summary = FALSE, rownames = FALSE)

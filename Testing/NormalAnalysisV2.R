@@ -17,7 +17,7 @@ library(reshape2)
 #### Declare variables ----
 
 # Reps = number of repetitions of experiment
-Reps = 1000
+Reps = 10000
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -142,13 +142,13 @@ Coverage.values <- An.Cond[, .(FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), n
                            ),
                        by = .(Rep_theta, Rep_NumStudies)]
 
-Coverage.values <- melt(Coverage.values, id = c("Rep_theta", "Rep_NumStudies"))
+Coverage.values2<- melt(Coverage.values, id = c("Rep_theta", "Rep_NumStudies"))
 
-Coverage.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Coverage.values)
+Coverage.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Coverage.values2)
 Coverage.plot
 
 
 #### Testing stargazer -----
 
 
-stargazer(Coverage.values[, -1, with = FALSE ], summary = FALSE)
+stargazer(Coverage.values[, -1, with = FALSE ], summary = FALSE, rownames = FALSE)

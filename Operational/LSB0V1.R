@@ -698,7 +698,7 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
               mawd.lm <- lm(temp.data$Study_estimate ~ 1, weights = 1/(temp.data$Study_sd^2))
               sm.mawd.lm <- summary(mawd.lm)
               ifelse(mean(sm.mawd.lm$residuals^2) < 1, phi.est  <- 1, phi.est <- mean(sm.mawd.lm$residuals^2))
-              rma.uni(temp.data$Study_estimate, temp.data$Study_sd * sqrt(phi.est) , method = "FE")}
+              rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2 * phi.est , method = "FE")}
               , error = function(e){return(list(se = NA))
               })
             

@@ -1,18 +1,3 @@
-###########################
-# This script is set up to simulate UMD with bias introduced to model the bias introduced by selective
-# outcome reporting. Multiple correlated values are drawn for each individual within each study (approximating multiple measures)
-# then multiple logORs created and the value with the lowest p selected for reporting.
-#
-# First it sets up relevant libraries, variables and functions
-# Then it simulates individual level data in the first parallel loop, then saves this out
-# Finally it loops again over all conditions to perform and saves the analysis
-#
-# To save disk space and write time, values on all the conditions are not saved with the study data,
-# but are captured in a Unique_ID (warning - there are 2 different IDs, one for simulation, another for analysis).
-#
-# To reduce loading time and disk space, output saved as RDS file not csv
-##########################
-
 ### Remove previous variables
 rm(list = ls())
 
@@ -25,6 +10,7 @@ library(foreach)
 library(doRNG)
 library(copula)
 library(compiler)
+library(metafor)
 enableJIT(3)
 
 set.seed(123)
@@ -36,7 +22,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables ----
 
 # Reps = number of repetitions of experiment
-Reps = 10
+Reps = 20
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -48,7 +34,7 @@ Subj <- list(as.integer(c(60,60)), as.integer(c(20,100)), as.integer(c(250, 1000
 True.sd = sqrt(1)
 
 # theta = population level mean - need good sense of range for SMD
-theta = c(-1.53, -0.25, 0, 0.25, 1.53)
+theta = c( -0.76,  -0.12,  0, 0.12, 0.76)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(0, 0.004, 0.067, 1.267)
@@ -111,6 +97,7 @@ findIDNSim <- function(repetitions, subjects, truevalue, hetero, numstudies){
   }
   return(IDnumber)
 }
+
 
 ### Unstandardised mean differrence function
 
@@ -354,142 +341,22 @@ mod.hc <- function(object, digits, transf, targs, control, tau2est, ...) {
 }
 
 #### Parallel Sim Loop ----
-rng <- RNGseq(length(Subj)*length(theta), 1234)
 
 StartTime <- proc.time()
 
 registerDoParallel(c1)
 set.seed(123)
-r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula"), 
-              .export = c("Studies", "Subj", "True.sd",
-                          "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
-                          "Begg_b", "Begg_sided", "Tested.outcomes", "Sd.split",
-                          "Bias.multiple", "UMD.mult.out", "Begg_c")
-) %:% foreach (k = theta, res = rng[(apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1)*length(theta) + 1:length(theta)], .combine=rbind, .packages = c("data.table", "copula"), 
-               .export = c("Studies", "Subj", "True.sd",
-                           "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
-                           "Begg_b", "Begg_sided", "Tested.outcomes", "Sd.split",
-                           "Bias.multiple", "UMD.mult.out", "Begg_c")
-) %dopar% {
+Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
+                               .export = c("Studies", "Subj", "True.sd",
+                                           "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
+                                           "Begg_b", "Begg_sided", "Tested.outcomes", "Sd.split",
+                                           "Bias.multiple", "UMD.mult.out", "Begg_c", "anyNA", ".psort", "mod.hc")
+) %dorng% {
   
-  ID = length(tau.sq) * Reps * sum(Studies)
-  
-  Normal.Simulation <- data.table(
-    Unique_ID = integer(length = ID),
-    Study_estimate = numeric(length = ID),
-    Study_sd = numeric(length = ID),
-    Study_n = integer(length = ID)
-#         Study_rejectedMeans = list(length = ID),
-#         Study_rejectedSDs = list(length = ID)
-    #     Study_Number.of.biases = integer(length = ID)
-  )
-  
-  dummy.counter <- 1
-  
-  for (l in tau.sq){
-    
-    for (n in Studies){
-      
-      for (o in 1:n){
-        
-        for (m in 1:Reps){
-          
-          
-          counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
-                                  (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
-                                  (match(l, tau.sq)-1) * sum(Studies) * Reps +
-                                  (sum(Studies[0:(match(n, Studies)-1)]) + o -1) * Reps +
-                                  m
-          )
-          
-          #Select sample size
-          if (is.integer(i[1]) == TRUE){
-            #Study_patientnumber <- i[1]
-            Study_patientnumber <- as.integer( (runif(1, sqrt(i[1]), sqrt(i[2])))^2 )
-          } else {
-            Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 4)
-          }
-          
-          # Different function for simulation creates multiple correlated outcomes, ordered by p value
-          Study_values <- UMD.mult.out(Study_patientnumber, k, l, controlProp, True.sd, Sd.split, Tested.outcomes)
-          
-          Study_mean <- Study_values[[1]]
-          Study_StanDev <- Study_values[[2]]
-          
-          Study.n <- as.integer(0.5*Study_patientnumber) * 2
-          
-          Normal.Simulation[dummy.counter, `:=` (Unique_ID = counter,
-                                                 Study_n = Study.n, Study_estimate = Study_mean[1], 
-                                                 Study_sd = Study_StanDev[1]
-#                                                  Study_rejectedMeans = list(Study_mean[-1]),
-#                                                  Study_rejectedSDs = list(Study_StanDev[-1])
-                                                 )]
-          
-          dummy.counter <- dummy.counter + 1
-          
-        }
-        
-      }
-    }
-  }
-  Normal.Simulation
-}
-
-#### Need to then sort final table and add values for rep number, rep subj, rep theta, rep tau2, rep numstudies
-Normal.Simulation <- r[order(Unique_ID)]
-# 
-# ID =  length(Subj) * length(theta) * length(tau.sq) * Reps * sum(Studies)
-# Normal.Simulation$Rep_Number =  rep(1:Reps, times = ID/Reps)
-# intermediate <- integer()
-# for (i in Studies){intermediate <- append(intermediate, rep(i, times = i*Reps))}
-# Normal.Simulation$Rep_NumStudies = rep(intermediate, times = ID/(Reps*sum(Studies)))
-# Normal.Simulation$Rep_tau.sq = rep(rep(tau.sq, each = Reps * sum(Studies)), times = ID/(Reps*sum(Studies)*length(tau.sq)))
-# Normal.Simulation$Rep_theta = rep( rep(theta, each = Reps * sum(Studies) * length(tau.sq)), times = length(Subj))
-# 
-# ### Create keyable vector for Subj
-# Subj2 <- c(60, 20, 250, 4.2)
-# Normal.Simulation$Rep_Subj = rep(Subj2, each = ID / length(Subj))
-
-TimeTakenSim <- proc.time() - StartTime
-
-stopCluster(c1)
-
-rm(r)
-
-#write.csv(Normal.Simulation, file = "NSBOutV1.csv")
-saveRDS(Normal.Simulation, file = "NSBOutV1")
-
-# df.Normal.Simulation <- as.data.frame(Normal.Simulation)
-# df.Normal.Simulation$Study_rejectedMeans <- vapply(df.Normal.Simulation$Study_rejectedMeans, paste, collapse = ", ", character(1L))
-# df.Normal.Simulation$Study_rejectedSDs <- vapply(df.Normal.Simulation$Study_rejectedSDs, paste, collapse = ", ", character(1L))
-# write.csv(df.Normal.Simulation, file = "NormalSimulation1.csv")
-
-##### Analysis loop ----
-
-library(metafor)
-
-Subj <- c(60, 20, 250, 4.2)
-
-#Normal.Simulation <- read.csv("NormalSimulation1.csv")
-#Normal.Simulation <- data.table(Normal.Simulation)
-setkey(Normal.Simulation, "Unique_ID")
-
-
-StartTime <- proc.time()
-c1 <- makeCluster(num.Cores)
-registerDoParallel(c1)
-
-r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"), 
-              .export = c("Studies", "Subj", "True.sd", "Reps",
-                          "theta", "tau.sq", "Normal.Simulation", "anyNA", ".psort", "mod.hc", "findIDNSim")
-) %:% foreach (k = theta, .combine=rbind, .packages = c("data.table", "metafor"), 
-               .export = c("Studies", "Subj", "True.sd", "Reps",
-                           "theta", "tau.sq", "Normal.Simulation", "anyNA", ".psort", "mod.hc", "findIDNSim")
-) %dopar% {
   # ID different for analysis
-  ID = length(tau.sq) * Reps * length(Studies)
+  ID = length(tau.sq) * length(Subj) * length(theta) * length(Studies)
   
-  Normal.Sim.Results <- data.table(
+  Normal.Sim <- data.table(
     Unique_ID = integer(length = ID),
     FE_Estimate = numeric(length = ID),
     FE_se = numeric(length = ID),
@@ -522,28 +389,45 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
     
     for (n in Studies){
       
-      for (m in 1:Reps){
+      for (i in Subj){
         
+        for(k in theta){
         
-        #         counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(theta) * length(tau.sq) * sum(Studies) * Reps +
-        #                                 (match(k, theta)-1) * length(tau.sq) * sum(Studies) * Reps +
-        #                                 (match(l, tau.sq)-1) * sum(Studies) * Reps +
-        #                                 (sum(Studies[0:(match(n, Studies)-1)]) + o -1) * Reps +
-        #                                 m
-        #         )
+        Study_estimate <- numeric(length = n)
+        Study_sd <- numeric(length = n)
+        ni <- integer(length = n)
+        
+        for (o in 1:n){
+          
+          #Select sample size
+          if (is.integer(i[1]) == TRUE){
+            #Study_patientnumber <- i[1]
+            Study_patientnumber <- as.integer( (runif(1, sqrt(i[1]), sqrt(i[2])))^2 )
+          } else {
+            Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 4)
+          }
+          
+          Study_summary <- UMD(Study_patientnumber, k, l, controlProp, True.sd)
+          Study_mean <- Study_summary[1]
+          Study_StanDev <- Study_summary[2]
+          Study.n <- as.integer(0.5*Study_patientnumber) * 2
+          
+          Study_estimate[o] <- Study_mean
+          Study_sd[o] <- Study_StanDev
+          ni[o] <- Study.n
+        }
         
         ## Counter without number of studies
-        counter <- as.integer((match(i, Subj)-1) * length(theta) * length(tau.sq) * length(Studies) * Reps + 
+        counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(theta) * length(tau.sq) * length(Studies) * Reps + 
                                 (match(k, theta)-1) * length(tau.sq) * length(Studies) * Reps +
                                 (match(l, tau.sq)-1) * length(Studies) * Reps +
                                 (match(n, Studies)-1) * Reps + 
                                 m
         )
         
-        find.temp.values <- findIDNSim(m, i, k, l, n)
         
         ### Temporary data.table
-        temp.data <- Normal.Simulation[J(find.temp.values)]
+        temp.data <- data.table(Study_estimate, Study_sd, ni)
         
         #Fixed and random effects
         ma.fe <- tryCatch({
@@ -627,46 +511,49 @@ r <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "metafor"),
           })
         
         
-        Normal.Sim.Results[dummy.counter, `:=` (Unique_ID = counter,
-                                                FE_Estimate = ma.fe[[1]][1],
-                                                FE_se = ma.fe$se,
-                                                REML_Estimate = ma.reml$b[1],
-                                                REML_se = ma.reml$se,
-                                                REML_tau2 = ma.reml$tau2,
-                                                DL_Estimate = ma.DL[[1]][1],
-                                                DL_se = ma.DL$se,
-                                                DL_tau2 = ma.DL$tau2,
-                                                DL_I2 = ma.DL$I2,
-                                                HC_DL_se = ma.hc.DL$se,
-                                                HC_DL_CIlb = ma.hc.DL$ci.lb,
-                                                HC_DL_CIub = ma.hc.DL$ci.ub,
-                                                HC_REML_se = ma.hc.REML$se,
-                                                HC_REML_CIlb = ma.hc.REML$ci.lb,
-                                                HC_REML_CIub = ma.hc.REML$ci.ub,
-                                                KH_REML_CIlb = ma.reml.kh$ci.lb,
-                                                KH_REML_CIub = ma.reml.kh$ci.ub,
-                                                KH_REML_se = ma.reml.kh$se,
-                                                KH_DL_CIlb = ma.DL.kh$ci.lb,
-                                                KH_DL_CIub = ma.DL.kh$ci.ub,
-                                                KH_DL_se = ma.DL.kh$se,
-                                                Moreno_Estimate = moreno.est[1],
-                                                Moreno_se = moreno.est[2],
-                                                Mult_se = ma.mult$se
+        Normal.Sim[dummy.counter, `:=` (Unique_ID = counter,
+                                        FE_Estimate = ma.fe[[1]][1],
+                                        FE_se = ma.fe$se,
+                                        REML_Estimate = ma.reml$b[1],
+                                        REML_se = ma.reml$se,
+                                        REML_tau2 = ma.reml$tau2,
+                                        DL_Estimate = ma.DL[[1]][1],
+                                        DL_se = ma.DL$se,
+                                        DL_tau2 = ma.DL$tau2,
+                                        DL_I2 = ma.DL$I2,
+                                        HC_DL_se = ma.hc.DL$se,
+                                        HC_DL_CIlb = ma.hc.DL$ci.lb,
+                                        HC_DL_CIub = ma.hc.DL$ci.ub,
+                                        HC_REML_se = ma.hc.REML$se,
+                                        HC_REML_CIlb = ma.hc.REML$ci.lb,
+                                        HC_REML_CIub = ma.hc.REML$ci.ub,
+                                        KH_REML_CIlb = ma.reml.kh$ci.lb,
+                                        KH_REML_CIub = ma.reml.kh$ci.ub,
+                                        KH_REML_se = ma.reml.kh$se,
+                                        KH_DL_CIlb = ma.DL.kh$ci.lb,
+                                        KH_DL_CIub = ma.DL.kh$ci.ub,
+                                        KH_DL_se = ma.DL.kh$se,
+                                        Moreno_Estimate = moreno.est[1],
+                                        Moreno_se = moreno.est[2],
+                                        Mult_se = ma.mult$se
         )]
         
-        
         dummy.counter <- dummy.counter + 1
-        
+        }
       }
     }
   }
-  Normal.Sim.Results
+  Normal.Sim
 }
 
-Normal.Sim.Results <- r[order(Unique_ID)]
+stopCluster(c1)
+
+Normal.Sim.Results <- Normal.Sim.Results[order(Unique_ID)]
 
 ##### Need to re append values - specific to analysis
 ID =  length(Subj) * length(controlProp) * length(theta) * length(tau.sq) * Reps * length(Studies)
+
+Subj <- c(60, 20, 250, 4.2)
 
 Normal.Sim.Results$Rep_Number =  rep(1:Reps, times = ID/Reps)
 Normal.Sim.Results$Rep_NumStudies = rep(rep(Studies, each = Reps), times = ID/(Reps*length(Studies)))
@@ -676,24 +563,16 @@ Normal.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTakenAn <- proc.time() - StartTime
 
-#write.csv(Normal.Sim.Results, file = "NSBOutV1An.csv")
-saveRDS(Normal.Sim.Results, file = "NSBOutV1An")
-
-rm(r)
+saveRDS(Normal.Sim.Results, file = "NSTotalV2RDS")
 
 ### Checking values
 
 sum(is.na(Normal.Sim.Results))
 Normal.Sim.Results[is.na(Normal.Sim.Results$REML_Est)]
 
-mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_Est)
-mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.133]$DL_Est)
-mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.007]$DL_Est)
-
 #### Timings ----
 
 TimeTakenTotal <- proc.time() - StartTimeTotal
 
-TimeTakenSim
 TimeTakenAn
 TimeTakenTotal

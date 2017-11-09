@@ -22,7 +22,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables ----
 
 # Reps = number of repetitions of experiment
-Reps = 5
+Reps = 10
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -375,23 +375,15 @@ StartTime <- proc.time()
 
 registerDoParallel(c1)
 set.seed(123)
-LogOR.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
+LogOR.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
                               .export = c("Studies", "Subj", "True.sd",
                                           "theta", "tau.sq", "controlProp", "Severity.boundary", "Begg_a", 
                                           "Begg_b", "Begg_sided", "Tested.outcomes", "Sd.split",
                                           "Bias.multiple", "Log_Odds_Ratio", "EvFreq", "LogOR_mult_out" , "Begg_c", "anyNA", ".psort", "mod.hc")
-) %:% foreach (k = theta, res = rng[(apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1)*length(theta) + 1:length(theta)], .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
-               .export = c("Studies", "Subj", "True.sd",
-                           "theta", "tau.sq", "controlProp", "Severity.boundary", "Begg_a", 
-                           "Begg_b", "Begg_sided", "Tested.outcomes", "Sd.split",
-                           "Bias.multiple", "Log_Odds_Ratio", "EvFreq", "LogOR_mult_out", "Begg_c", "anyNA", ".psort", "mod.hc")
-) %dopar% {
-  
-  #set rng seed
-  rngtools::setRNG(res)
+) %dorng% {
   
   # ID different for analysis
-  ID = length(tau.sq) * Reps * length(Studies) * length(EvFreq)
+  ID = length(tau.sq) * length(Subj) * length(theta) * length(Studies) * length(EvFreq)
   
   LogOR.Sim <- data.table(
     Unique_ID = integer(length = ID),
@@ -423,25 +415,13 @@ LogOR.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tabl
   )
   dummy.counter <- 1
   
-  #   ID = length(tau.sq) * length(EvFreq) * Reps * sum(Studies) 
-  #   
-  #   LogOR.Simulation <- data.table(
-  #     Unique_ID = integer(length = ID),
-  #     Study_G1O1 = numeric(length = ID),
-  #     Study_G2O1 = numeric(length = ID),
-  #     Study_n = integer(length = ID)
-  #     #     Study_rejectedMeans = list(length = ID),
-  #     #     Study_rejectedSDs = list(length = ID),
-  #     #     Study_Number.of.biases = integer(length = ID)
-  #   )
-  #   
-  #   dummy.counter <- 1
-  
   for (l in tau.sq){
     
     for (j in EvFreq){
       
-      for (m in 1:Reps){
+      for (i in Subj){
+        
+        for(k in theta){
         
         for (n in Studies){
           
@@ -452,14 +432,6 @@ LogOR.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tabl
           
           for (o in 1:n){
             
-            #             counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(EvFreq) * length(theta) * length(tau.sq) * sum(Studies) * Reps + 
-            #                                     (match(k, theta)-1) * length(tau.sq) * length(EvFreq) * sum(Studies) * Reps +
-            #                                     (match(l, tau.sq)-1) * length(EvFreq) * sum(Studies) * Reps +
-            #                                     (match(j, EvFreq)-1) * sum(Studies) * Reps +
-            #                                     (sum(Studies[0:(match(n, Studies)-1)]) + o -1) * Reps +
-            #                                     m
-            #             )
-            
             #Select sample size
             if (is.integer(i[1]) == TRUE){
               Study_patientnumber <- as.integer( (runif(1, sqrt(i[1]), sqrt(i[2])))^2 )
@@ -467,23 +439,11 @@ LogOR.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tabl
               Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 2)
             }
             
-            repeat{
-              
-              x <- Log_Odds_Ratio(Study_patientnumber, k, l, controlProp, j)
-              x.N <- 2*x[5]
-              
-              study.mean <- log((x[3]/x[4]) / (x[1]/x[2]))
-              
-              study.se <- sqrt(1/x[1] + 1/x[2] + 1/x[3] + 1/x[4])
-              
-              
-              Begg_p <- pnorm(study.mean/(study.se))
-              
-              Step_weight <- ifelse(Begg_p < Severity.boundary[1], 1, ifelse(Begg_p < Severity.boundary[2], 0.75, 0.25))
-              
-              if(rbinom(1,1, Step_weight) == 1 ){break}
-              
-            }
+            x <- Log_Odds_Ratio(Study_patientnumber, k, l, controlProp, j)
+            x.N <- 2*x[5]
+            
+            study.mean <- log((x[3]/x[4]) / (x[1]/x[2]))
+            study.se <- sqrt(1/x[1] + 1/x[2] + 1/x[3] + 1/x[4])
             
             Study_estimate[o] <- study.mean
             Study_sd[o] <- study.se
@@ -662,6 +622,7 @@ LogOR.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tabl
             dummy.counter <- dummy.counter + 1
           }
         }
+        }
       }
     }
   }
@@ -688,8 +649,7 @@ LogOR.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTakenSim <- proc.time() - StartTime
 
-#write.csv(LogOR.Sim.Results, file = "LSTotalV2.csv")
-saveRDS(LogOR.Sim.Results, file = "LSTotalStepRDS")
+saveRDS(LogOR.Sim.Results, file = "LSTotalV2RDS")
 
 #### Timings ----
 
@@ -703,22 +663,3 @@ TimeTakenTotal
 sum(is.na(LogOR.Sim.Results))
 LogOR.Sim.Results[is.na(LogOR.Sim.Results$REML_Est)]
 summary(LogOR.Sim.Results)
-
-
-# mean(as.vector(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 3.04,.(DL_I2)]))
-mean(LogOR.Sim.Results[Rep_theta == log(1) & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 3.04]$DL_I2)
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.04]$DL_I2)
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.01777778]$DL_I2)
-
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 3.04]$DL_tau2)
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.04]$DL_tau2)
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.01777778]$DL_tau2)
-
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 3.04]$DL_Estimate)
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.04]$DL_Estimate)
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.01777778]$DL_Estimate)
-
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 3.04]$DL_se)
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.04]$DL_se)
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0.01777778]$DL_se)
-mean(LogOR.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 100 & Rep_tau.sq == 0]$DL_se)

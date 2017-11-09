@@ -45,13 +45,13 @@ Studies = c(3,5,10,30,50,100)
 Subj <- list(as.integer(c(100,100)), as.integer(c(20,100)), as.integer(c(250, 1000)), as.numeric(c(4.7, 1.2)))
 
 # sd = study level standard deviation
-True.sd = sqrt(2)
+True.sd = sqrt(1)
 
 # theta = population level log(OR) - this should be considered more purely on the log scale
 theta = c(log(0.25), log(0.8), log(1), log(1.25), log(4))
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw)
-tau.sq = c(0, 0.01777778, 0.04, 3.04)
+tau.sq = c(0, 0.008, 0.04, 3.04)
 
 # Frequency of event averaged across 2 arms (before applying change due to theta) = EvFreq
 EvFreq = c(0.1, 0.3, 0.5)

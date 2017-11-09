@@ -31,13 +31,13 @@ Studies = c(3,5,10,30,50,100)
 Subj <- list(as.integer(c(60,60)), as.integer(c(20,100)), as.integer(c(250, 1000)), as.numeric(c(4.2, 1.1)))
 
 # sd = study level standard deviation
-True.sd = sqrt(2)
+True.sd = sqrt(1)
 
 # theta = population level mean - need good sense of range for SMD
 theta = c(-1.53, -0.25, 0, 0.25, 1.53)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(0, 0.007, 0.133, 2.533)
+tau.sq = c(0, 0.004, 0.067, 1.267)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5

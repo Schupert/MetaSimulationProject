@@ -345,7 +345,7 @@ mod.hc <- function(object, digits, transf, targs, control, tau2est, ...) {
 StartTime <- proc.time()
 
 registerDoParallel(c1)
-set.seed(123)
+set.seed(1234)
 Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
                                .export = c("Studies", "Subj", "True.sd",
                                            "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 

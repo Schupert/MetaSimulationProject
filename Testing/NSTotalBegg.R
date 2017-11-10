@@ -34,7 +34,7 @@ Subj <- list(as.integer(c(60,60)), as.integer(c(20,100)), as.integer(c(250, 1000
 True.sd = sqrt(2)
 
 # theta = population level mean - need good sense of range for SMD
-theta = c(-1.53, -0.25, 0, 0.25, 1.53)
+theta = c( -0.76,  -0.12,  0, 0.12, 0.76)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
 tau.sq = c(0, 0.004, 0.067, 1.267)
@@ -342,29 +342,19 @@ mod.hc <- function(object, digits, transf, targs, control, tau2est, ...) {
 
 #### Parallel Sim Loop ----
 
-rng <- RNGseq(length(Subj)*length(theta), 1234)
-
 StartTime <- proc.time()
 
 registerDoParallel(c1)
-set.seed(123)
-Normal.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
+set.seed(2543)
+Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
                                .export = c("Studies", "Subj", "True.sd",
                                            "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
                                            "Begg_b", "Begg_sided", "Tested.outcomes", "Sd.split",
                                            "Bias.multiple", "UMD.mult.out", "Begg_c", "anyNA", ".psort", "mod.hc")
-) %:% foreach (k = theta, res = rng[(apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1)*length(theta) + 1:length(theta)], .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
-               .export = c("Studies", "Subj", "True.sd",
-                           "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
-                           "Begg_b", "Begg_sided", "Tested.outcomes", "Sd.split",
-                           "Bias.multiple", "UMD.mult.out", "Begg_c", "anyNA", ".psort", "mod.hc")
-) %dopar% {
-  
-  #set rng seed
-  rngtools::setRNG(res)
+) %dorng% {
   
   # ID different for analysis
-  ID = length(tau.sq) * Reps * length(Studies)
+  ID = length(tau.sq) * length(Subj) * length(theta) * length(Studies)
   
   Normal.Sim <- data.table(
     Unique_ID = integer(length = ID),
@@ -399,7 +389,9 @@ Normal.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tab
     
     for (n in Studies){
       
-      for (m in 1:Reps){
+      for (i in Subj){
+        
+        for(k in theta){
         
         Study_estimate <- numeric(length = n)
         Study_sd <- numeric(length = n)
@@ -558,6 +550,7 @@ Normal.Sim.Results <- foreach (i = Subj, .combine=rbind, .packages = c("data.tab
         )]
         
         dummy.counter <- dummy.counter + 1
+        }
       }
     }
   }
@@ -590,10 +583,6 @@ saveRDS(Normal.Sim.Results, file = "NSBeggRDS")
 
 sum(is.na(Normal.Sim.Results))
 Normal.Sim.Results[is.na(Normal.Sim.Results$REML_Est)]
-
-mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 2.533]$DL_Est)
-mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.133]$DL_Est)
-mean(Normal.Sim.Results[Rep_theta == 0 & Rep_NumStudies == 100 & Rep_Subj == 60 & Rep_tau.sq == 0.007]$DL_Est)
 
 #### Timings ----
 

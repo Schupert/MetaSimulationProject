@@ -113,7 +113,7 @@ Normal.Sim.Results <- data.table(Normal.Sim.Results)
 
 sig.level <- (1 - 0.05/2)
 
-An.Cond <- Normal.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[1] & Rep_Subj == 60]
+An.Cond <- Normal.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[4] & Rep_Subj == 4.2]
 
 #### LOR Import data here ----
 
@@ -137,6 +137,9 @@ An.Cond$REML_CIub <- An.Cond$REML_Estimate + qnorm(sig.level) * An.Cond$REML_se
 
 An.Cond$DL_CIlb <- An.Cond$DL_Estimate - qnorm(sig.level) * An.Cond$DL_se
 An.Cond$DL_CIub <- An.Cond$DL_Estimate + qnorm(sig.level) * An.Cond$DL_se
+
+An.Cond$Doi_CIlb <- An.Cond$FE_Estimate - qnorm(sig.level) * An.Cond$HC_DL_se
+An.Cond$Doi_CIub <- An.Cond$FE_Estimate + qnorm(sig.level) * An.Cond$HC_DL_se
 
 ### Does Moreno use z-score?
 
@@ -177,7 +180,7 @@ MSE1.values <- An.Cond[, .(FE = mean((FE_Estimate - Rep_theta)^2, na.rm = TRUE),
 
 MSE1.values2 <- melt(MSE1.values, id = c("Rep_theta", "Rep_NumStudies"))
 
-MSE1.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = MSE1.values2) + coord_cartesian(ylim = c(0, 0.1)) + xlab("Number of Studies") + ylab("MSE")
+MSE1.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = MSE1.values2) + xlab("Number of Studies") + ylab("MSE")+ coord_cartesian(ylim = c(0, 2)) 
 MSE1.plot <- ggplot(MSE1.values2, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + 
   xlab("Number of Studies") + ylab("MSE") + scale_colour_grey() + 
   scale_linetype_manual(values=c("solid", "dotted", "dotdash", "longdash")) + coord_cartesian(ylim = c(0, 0.1))
@@ -187,13 +190,13 @@ MSE1.plot <- ggplot(MSE1.values2, aes(x = Rep_NumStudies, y = value, group = var
   xlab("Number of Studies") + ylab("MSE") + scale_colour_grey() + coord_cartesian(ylim = c(0, 0.5)) + geom_point(aes(shape = variable))
 MSE1.plot
 
-MSE2.values <- An.Cond[, .(FE = (mean(FE_Estimate) - Rep_theta) + var(FE_Estimate), REML = (mean(REML_Estimate, na.rm = TRUE) - Rep_theta) + var(REML_Estimate, na.rm = TRUE),
-                           DL = (mean(DL_Estimate, na.rm = TRUE) - Rep_theta) + var(DL_Estimate, na.rm = TRUE), Moreno = (mean(Moreno_Estimate, na.rm = TRUE) - Rep_theta) + var(Moreno_Estimate, na.rm = TRUE) ),
+MSE2.values <- An.Cond[, .(FE = (mean(FE_Estimate) - Rep_theta)^2 + var(FE_Estimate), REML = (mean(REML_Estimate, na.rm = TRUE) - Rep_theta)^2 + var(REML_Estimate, na.rm = TRUE),
+                           DL = (mean(DL_Estimate, na.rm = TRUE) - Rep_theta)^2 + var(DL_Estimate, na.rm = TRUE), Moreno = (mean(Moreno_Estimate, na.rm = TRUE) - Rep_theta)^2 + var(Moreno_Estimate, na.rm = TRUE) ),
                        by = .(Rep_theta, Rep_NumStudies)]
 
 MSE2.values <- melt(MSE2.values, id = c("Rep_theta", "Rep_NumStudies"))
 
-MSE2.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = MSE2.values) + coord_cartesian(ylim = c(0, 0.1))
+MSE2.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = MSE2.values) #+ coord_cartesian(ylim = c(0, 0.1))
 MSE2.plot
 
 
@@ -204,6 +207,7 @@ Coverage.values <- An.Cond[, .(FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), n
                                "HC REML" = mean(CI.betw(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
                                "KH DL" = mean(CI.betw(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
                                "KH REML" = mean(CI.betw(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
+                               IVHet = mean(CI.betw(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
                                Moreno = mean(CI.betw(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
                                Mult = mean(CI.betw(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE)
 ),
@@ -211,7 +215,7 @@ by = .(Rep_theta, Rep_NumStudies)]
 
 Coverage.values2<- melt(Coverage.values, id = c("Rep_theta", "Rep_NumStudies"))
 
-Coverage.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Coverage.values2) + ylab("Coverage") + xlab("Number of studies") + coord_cartesian(ylim = c(0.9, 1))
+Coverage.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Coverage.values2) + ylab("Coverage") + xlab("Number of studies") #+ coord_cartesian(ylim = c(0.9, 1))
 Coverage.plot <- ggplot(Coverage.values2, aes(x = Rep_NumStudies, y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() +
   ylab("Coverage") + xlab("Number of studies") + scale_colour_grey() + coord_cartesian(ylim = c(0.9, 1))
 Coverage.plot
@@ -245,6 +249,7 @@ Outside.values <- An.Cond[, .(FE = mean(CI.updown(Rep_theta, FE_CIlb, FE_CIub), 
                               "HC REML" = mean(CI.updown(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
                               "KH DL" = mean(CI.updown(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
                               "KH REML" = mean(CI.updown(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
+                              IVHet = mean(CI.updown(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
                               Moreno = mean(CI.updown(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
                               Mult = mean(CI.updown(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE)
 ),

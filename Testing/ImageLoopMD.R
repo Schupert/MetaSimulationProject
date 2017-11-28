@@ -77,7 +77,7 @@ sig.level <- (1 - 0.05/2)
 
 #### Specify type of bias and directory
 getwd()
-Type.of.bias <- "Meth"
+Type.of.bias <- "Method"
 mainDir <- file.path(getwd(), Type.of.bias)
 
 Subj <- c(4.2, 60, 20, 250)
@@ -160,9 +160,9 @@ for (a in theta){
       
       setwd(file.path(mainDir, subDir))
       
-      ggsave(paste("MD", Type.of.bias, "Bias", "Th", a, "Tau", b, "Size", c, ".png", sep = ""), bias.plot, dpi = 300, device = "png")
-      ggsave(paste("MD", Type.of.bias, "MSE", "Th", a, "Tau", b, "Size", c, ".png", sep = ""), MSE1.plot, dpi = 300, device = "png")
-      ggsave(paste("MD", Type.of.bias, "Cov", "Th", a, "Tau", b, "Size", c, ".png", sep = ""), Coverage.plot, dpi = 300, device = "png")
+      ggsave(paste("MD", Type.of.bias, "Bias", "Th", a, "Tau", b, "Size", c, ".png", sep = ""), bias.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
+      ggsave(paste("MD", Type.of.bias, "MSE", "Th", a, "Tau", b, "Size", c, ".png", sep = ""), MSE1.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
+      ggsave(paste("MD", Type.of.bias, "Cov", "Th", a, "Tau", b, "Size", c, ".png", sep = ""), Coverage.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
       
       
     }

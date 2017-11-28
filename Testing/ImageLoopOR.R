@@ -65,7 +65,7 @@ Bias.multiple <- 0.85
 
 #### LOR Import data here ----
 
-system.time(LogOR.Sim.Results <- readRDS(file = "LSTotalBeggRDS"))
+system.time(LogOR.Sim.Results <- readRDS(file = "LSTotalStepRDS"))
 
 LogOR.Sim.Results <- data.table(LogOR.Sim.Results)
 #### LOR Select subset of data for analysis ----
@@ -77,7 +77,7 @@ An.Cond <- LogOR.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[3] & R
 Subj <- c(4.7, 100, 20, 250)
 
 getwd()
-Type.of.bias <- "Begg"
+Type.of.bias <- "Step"
 mainDir <- file.path(getwd(), Type.of.bias)
 
 for (a in theta){
@@ -159,9 +159,9 @@ for (a in theta){
         
         setwd(file.path(mainDir, subDir))
         
-        ggsave(paste("MD", Type.of.bias, "Bias", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), bias.plot, dpi = 300, device = "png")
-        ggsave(paste("MD", Type.of.bias, "MSE", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), MSE1.plot, dpi = 300, device = "png")
-        ggsave(paste("MD", Type.of.bias, "Cov", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), Coverage.plot, dpi = 300, device = "png")
+        ggsave(paste("MD", Type.of.bias, "Bias", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), bias.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
+        ggsave(paste("MD", Type.of.bias, "MSE", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), MSE1.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
+        ggsave(paste("MD", Type.of.bias, "Cov", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), Coverage.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
         
       }
     }

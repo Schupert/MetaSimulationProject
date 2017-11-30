@@ -65,7 +65,7 @@ Bias.multiple <- 0.85
 
 #### LOR Import data here ----
 
-system.time(LogOR.Sim.Results <- readRDS(file = "LSTotalStepRDS"))
+system.time(LogOR.Sim.Results <- readRDS(file = "LSTotalV2RDS"))
 
 LogOR.Sim.Results <- data.table(LogOR.Sim.Results)
 #### LOR Select subset of data for analysis ----
@@ -77,7 +77,7 @@ An.Cond <- LogOR.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[3] & R
 Subj <- c(4.7, 100, 20, 250)
 
 getwd()
-Type.of.bias <- "Step"
+Type.of.bias <- "None"
 mainDir <- file.path(getwd(), Type.of.bias)
 
 for (a in theta){
@@ -122,7 +122,7 @@ for (a in theta){
         #bias.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data = Bias.values2) + xlab("Number of Studies") + ylab("Bias")
         bias.plot <- ggplot(Bias.values2, aes(x = Rep_NumStudies, y = value, group = variable)) + 
           geom_line(aes(linetype = variable), size = 1) + theme_bw() + xlab("Number of Studies") + 
-          ylab("Bias") + scale_colour_grey() + scale_linetype_manual(values=c("solid", "dotted", "dotdash", "longdash"), name = "Estimator") + coord_cartesian(ylim = c(-0.75, 0.25))
+          ylab("Bias") + scale_colour_grey() + scale_linetype_manual(values=c("solid", "dotted", "dotdash", "longdash"), name = "Estimator") + coord_cartesian(ylim = c(-0.75, 0.75))
         
         
         MSE1.values <- An.Cond[, .(FE = mean((FE_Estimate - Rep_theta)^2, na.rm = TRUE), REML = mean((REML_Estimate - Rep_theta)^2, na.rm = TRUE),
@@ -159,9 +159,9 @@ for (a in theta){
         
         setwd(file.path(mainDir, subDir))
         
-        ggsave(paste("MD", Type.of.bias, "Bias", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), bias.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
-        ggsave(paste("MD", Type.of.bias, "MSE", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), MSE1.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
-        ggsave(paste("MD", Type.of.bias, "Cov", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), Coverage.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
+        ggsave(paste("OR", Type.of.bias, "Bias", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), bias.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
+        ggsave(paste("OR", Type.of.bias, "MSE", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), MSE1.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
+        ggsave(paste("OR", Type.of.bias, "Cov", "Th", round(a, digits = 2), "Tau", b, "ER", d, "Size", c, ".png", sep = ""), Coverage.plot, dpi = 300, device = "png", width = 8.01, height = 5.67, units = "in")
         
       }
     }

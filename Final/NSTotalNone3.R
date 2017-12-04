@@ -22,7 +22,7 @@ c1 <- makeCluster(num.Cores)
 #### Declare variables ----
 
 # Reps = number of repetitions of experiment
-Reps = 5
+Reps = 20
 
 # k = number of studies in series
 Studies = c(3,5,10,30,50,100)
@@ -31,13 +31,13 @@ Studies = c(3,5,10,30,50,100)
 Subj <- list(as.integer(c(60,60)), as.integer(c(20,100)), as.integer(c(250, 1000)), as.numeric(c(4.2, 1.1)))
 
 # sd = study level standard deviation
-True.sd = sqrt(2)
+True.sd = sqrt(1)
 
 # theta = population level mean - need good sense of range for SMD
 theta = c( -0.76,  -0.12,  0, 0.12, 0.76)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(0, 0.004, 0.067, 1.267)
+tau.sq = c(0, 0.005, 0.022, 1.676)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -345,7 +345,7 @@ mod.hc <- function(object, digits, transf, targs, control, tau2est, ...) {
 StartTime <- proc.time()
 
 registerDoParallel(c1)
-set.seed(2543)
+set.seed(1234)
 Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
                                .export = c("Studies", "Subj", "True.sd",
                                            "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
@@ -407,21 +407,10 @@ Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.t
             Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 4)
           }
           
-          repeat{
-            Study_summary <- UMD(Study_patientnumber, k, l, controlProp, True.sd)
-            Study_mean <- Study_summary[1]
-            Study_StanDev <- Study_summary[2]
-            Study.n <- as.integer(0.5*Study_patientnumber) * 2
-            
-            Begg_weight <-exp(
-              -Begg_b * (
-                (Begg_sided * pnorm(Study_mean/(Study_StanDev))) 
-                ^Begg_a  ) * (Study.n ^ Begg_c)
-            ) 
-            
-            if(rbinom(1,1, Begg_weight) == 1 ){break}
-            
-          }
+          Study_summary <- UMD(Study_patientnumber, k, l, controlProp, True.sd)
+          Study_mean <- Study_summary[1]
+          Study_StanDev <- Study_summary[2]
+          Study.n <- as.integer(0.5*Study_patientnumber) * 2
           
           Study_estimate[o] <- Study_mean
           Study_sd[o] <- Study_StanDev
@@ -574,10 +563,7 @@ Normal.Sim.Results$Rep_Subj = rep(Subj, each = ID / length(Subj))
 
 TimeTakenAn <- proc.time() - StartTime
 
-
-#write.csv(Normal.Sim.Results, file = "NSB0V1An.csv")
-saveRDS(Normal.Sim.Results, file = "NSBeggRDS")
-
+saveRDS(Normal.Sim.Results, file = "NSTotalV2RDS")
 
 ### Checking values
 

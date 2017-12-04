@@ -21,3 +21,13 @@ tau2LOR / (tau2LOR + 16 /1000)
 
 LORtheta <- c(log(1/4), log(0.8), log(1), log(1.25), log(4))
 SMDtheta <- LORtheta * ( - sqrt(3) / pi)
+
+#### Basing UMD tau2 on LOR
+
+newtau2UMD <- tau2LOR * ( sqrt(3) / pi)
+
+newtau2UMD / (newtau2UMD + 4 /20)
+newtau2UMD / (newtau2UMD + 4 /60)
+newtau2UMD / (newtau2UMD + 4 /100)
+newtau2UMD / (newtau2UMD + 4 /250)
+newtau2UMD / (newtau2UMD + 4 /1000)

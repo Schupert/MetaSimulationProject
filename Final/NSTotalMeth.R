@@ -345,7 +345,7 @@ mod.hc <- function(object, digits, transf, targs, control, tau2est, ...) {
 StartTime <- proc.time()
 
 registerDoParallel(c1)
-set.seed(5876)
+set.seed(4567)
 Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
                                .export = c("Studies", "Subj", "True.sd",
                                            "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
@@ -407,12 +407,12 @@ Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.t
             Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 4)
           }
           
-          # Different function for simulation creates multiple correlated outcomes, ordered by p value
-          Study_values <- UMD.mult.out(Study_patientnumber, k, l, controlProp, True.sd, Sd.split, Tested.outcomes)
+          ## Draw from binomial how many methodological concerns study has
+          Number.of.biases <- rbinom(1, 2, 1/(Study_patientnumber^0.3))
           
-          Study_mean <- Study_values[[1]][1]
-          Study_StanDev <- Study_values[[2]][1]
-          
+          Study_summary <- UMD(Study_patientnumber, k - Bias.multiple[Number.of.biases + 1], l, controlProp, True.sd)
+          Study_mean <- Study_summary[1]
+          Study_StanDev <- Study_summary[2]
           Study.n <- as.integer(0.5*Study_patientnumber) * 2
           
           Study_estimate[o] <- Study_mean
@@ -568,7 +568,7 @@ TimeTakenAn <- proc.time() - StartTime
 
 
 #write.csv(Normal.Sim.Results, file = "NSB0V1An.csv")
-saveRDS(Normal.Sim.Results, file = "NSTotalOutRDS")
+saveRDS(Normal.Sim.Results, file = "NSTotalMethRDS")
 
 
 ### Checking values

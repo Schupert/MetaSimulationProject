@@ -37,7 +37,7 @@ True.sd = sqrt(1)
 theta = c( -0.76,  -0.12,  0, 0.12, 0.76)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(0, 0.004, 0.067, 1.267)
+tau.sq = c(0, 0.005, 0.022, 1.676)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -129,6 +129,22 @@ UMD.mult.out <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd
   Studysd <- sqrt( (apply(TreatmentGroup, 2, var) * (Group1Size - 1) + apply(TreatmentGroup, 2, var) * (Group2Size-1))/ (Group1Size + Group2Size -2) * (1/Group1Size + 1/Group2Size))
   Begg_p <- pnorm(Studymean/Studysd)
   return(list(Studymean[order(Begg_p)], Studysd[order(Begg_p)]))
+}
+
+UMD.mult.out2 <- function(StudySize, Theta, Heterogeneity, Control_Prop, total.sd, frac, num.times){
+  StudyUMD <- rnorm(1, Theta, sqrt(Heterogeneity))
+  Group1Size <- as.integer(Control_Prop*StudySize)
+  Group2Size <- Group1Size
+  z <- normalCopula(param = frac, dim = num.times)
+  Z <- rCopula(Group1Size, z)
+  ControlGroup <- qnorm(Z, mean = -StudyUMD/2, sd = total.sd)
+  y <- normalCopula(param = frac, dim = num.times)
+  Y <- rCopula(Group1Size, y)
+  TreatmentGroup <- qnorm(Y, mean = StudyUMD/2, sd = total.sd)
+  Studymean <- apply(TreatmentGroup,2,mean) - apply(ControlGroup, 2, mean)
+  Studysd <- sqrt( (apply(TreatmentGroup, 2, var) * (Group1Size - 1) + apply(TreatmentGroup, 2, var) * (Group2Size-1))/ (Group1Size + Group2Size -2) * (1/Group1Size + 1/Group2Size))
+  Begg_p <- pnorm(Studymean/Studysd)
+  return(c(Studymean[order(Begg_p)[1]], Studysd[order(Begg_p)[1]]))
 }
 
 anyNA <- function(x) {
@@ -345,7 +361,7 @@ mod.hc <- function(object, digits, transf, targs, control, tau2est, ...) {
 StartTime <- proc.time()
 
 registerDoParallel(c1)
-set.seed(3465)
+set.seed(5876)
 Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
                                .export = c("Studies", "Subj", "True.sd",
                                            "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
@@ -392,164 +408,156 @@ Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.t
       for (i in Subj){
         
         for(k in theta){
-        
-        Study_estimate <- numeric(length = n)
-        Study_sd <- numeric(length = n)
-        ni <- integer(length = n)
-        
-        for (o in 1:n){
           
-          #Select sample size
-          if (is.integer(i[1]) == TRUE){
-            #Study_patientnumber <- i[1]
-            Study_patientnumber <- as.integer( (runif(1, sqrt(i[1]), sqrt(i[2])))^2 )
-          } else {
-            Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 4)
+          Study_estimate <- numeric(length = n)
+          Study_sd <- numeric(length = n)
+          ni <- integer(length = n)
+          
+          for (o in 1:n){
+            
+            #Select sample size
+            if (is.integer(i[1]) == TRUE){
+              #Study_patientnumber <- i[1]
+              Study_patientnumber <- as.integer( (runif(1, sqrt(i[1]), sqrt(i[2])))^2 )
+            } else {
+              Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 4)
+            }
+            
+            # Different function for simulation creates multiple correlated outcomes, ordered by p value
+            Study_values <- UMD.mult.out2(Study_patientnumber, k, l, controlProp, True.sd, Sd.split, Tested.outcomes)
+            
+            Study_mean <- Study_values[1]
+            Study_StanDev <- Study_values[2]
+            
+            Study.n <- as.integer(0.5*Study_patientnumber) * 2
+            
+            Study_estimate[o] <- Study_mean
+            Study_sd[o] <- Study_StanDev
+            ni[o] <- Study.n
           }
           
-          repeat{
-            
-            Study_summary <- UMD(Study_patientnumber, k, l, controlProp, True.sd)
-            Study_mean <- Study_summary[1]
-            Study_StanDev <- Study_summary[2]
-            
-            Begg_p <- pnorm(Study_mean/(Study_StanDev))
-            
-            Step_weight <- ifelse(Begg_p < Severity.boundary[1], 1, ifelse(Begg_p < Severity.boundary[2], 0.75, 0.25))
-            
-            if(rbinom(1,1, Step_weight) == 1 ){break}
-            
+          ## Counter without number of studies
+          counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(theta) * length(tau.sq) * length(Studies) * Reps + 
+                                  (match(k, theta)-1) * length(tau.sq) * length(Studies) * Reps +
+                                  (match(l, tau.sq)-1) * length(Studies) * Reps +
+                                  (match(n, Studies)-1) * Reps + 
+                                  m
+          )
+          
+          
+          ### Temporary data.table
+          temp.data <- data.table(Study_estimate, Study_sd, ni)
+          
+          #Fixed and random effects
+          ma.fe <- tryCatch({
+            rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2 , method = "FE")
+          },
+          error = function(e){
+            return(list(b = NA,  se = NA))
+          },
+          warning = function(w){
+            return(list(list(b = NA,  se = NA)))
           }
+          )
           
-          Study.n <- as.integer(0.5*Study_patientnumber) * 2
+          ma.reml <- tryCatch({
+            rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", control = list(stepadj = 0.5))
+          },
+          error = function(e){
+            return(list(b = NA, tau2 = NA, se = NA))
+          },
+          warning = function(w){
+            return(list(list(b = NA, tau2 = NA, se = NA)))
+          }
+          )
           
-          Study_estimate[o] <- Study_mean
-          Study_sd[o] <- Study_StanDev
-          ni[o] <- Study.n
-        }
-        
-        ## Counter without number of studies
-        counter <- as.integer((apply(sapply(Subj, function(vec) {i %in% vec}), 1, which.max)[1]-1) * length(theta) * length(tau.sq) * length(Studies) * Reps + 
-                                (match(k, theta)-1) * length(tau.sq) * length(Studies) * Reps +
-                                (match(l, tau.sq)-1) * length(Studies) * Reps +
-                                (match(n, Studies)-1) * Reps + 
-                                m
-        )
-        
-        
-        ### Temporary data.table
-        temp.data <- data.table(Study_estimate, Study_sd, ni)
-        
-        #Fixed and random effects
-        ma.fe <- tryCatch({
-          rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2 , method = "FE")
-        },
-        error = function(e){
-          return(list(b = NA,  se = NA))
-        },
-        warning = function(w){
-          return(list(list(b = NA,  se = NA)))
-        }
-        )
-        
-        ma.reml <- tryCatch({
-          rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", control = list(stepadj = 0.5))
-        },
-        error = function(e){
-          return(list(b = NA, tau2 = NA, se = NA))
-        },
-        warning = function(w){
-          return(list(list(b = NA, tau2 = NA, se = NA)))
-        }
-        )
-        
-        ma.DL <- tryCatch({
-          rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "DL")
-        },error = function(e){
-          return(list(b = NA, tau2 = NA, se = NA, I2 = NA))
-        },warning = function(w){
-          return(list(list(b = NA, tau2 = NA, se = NA, I2 = NA)))
-        })
-        
-        # Henmi & Copas
-        
-        ma.hc.DL <- tryCatch({
-          hc(ma.DL)
-        },error = function(e){
-          return(list(se = NA, ci.lb = NA, ci.ub = NA))
-        },warning = function(w){
-          return(list(list(se = NA, ci.lb = NA, ci.ub = NA)))
-        })
-        
-        ma.hc.REML <- tryCatch({
-          mod.hc(ma.reml, tau2est = ma.reml$tau2)
-        },error = function(e){
-          return(list(se = NA, ci.lb = NA, ci.ub = NA))
-        },warning = function(w){
-          return(list(list(se = NA, ci.lb = NA, ci.ub = NA)))
-        })
-        
-        # Knapp Hartung
-        
-        ma.reml.kh <- tryCatch({
-          rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", knha = TRUE, control = list(stepadj = 0.5))
-        },
-        error = function(e){
-          return(list(b = NA, tau2 = NA, se = NA, ci.lb = NA, ci.ub = NA))
-        },
-        warning = function(w){
-          return(list(b = NA, tau2 = NA, se = NA, ci.lb = NA, ci.ub = NA))
-        }
-        )
-        
-        ma.DL.kh <- tryCatch({rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "DL", knha = TRUE)}
-                             , error = function(e){return(list(se = NA, ci.lb = NA, ci.ub = NA))
-                             })
-        
-        ## Moreno (?D-var) - not exactly clear which implementation is being used is likely equation 2a
-        moreno.est <- tryCatch({ma.moren <- regtest(ma.fe , predictor = "vi", model = "lm")
-        c(ma.moren$fit[[5]][1],ma.moren$fit[[5]][3])
-        }, error=function(err) c(NA,NA))
-        
-        ## Mawdesley
-        
-        ma.mult <- tryCatch({
-          mawd.lm <- lm(temp.data$Study_estimate ~ 1, weights = 1/(temp.data$Study_sd^2))
-          sm.mawd.lm <- summary(mawd.lm)
-          ifelse(mean(sm.mawd.lm$residuals^2) < 1, phi.est  <- 1, phi.est <- mean(sm.mawd.lm$residuals^2))
-          rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2 * phi.est , method = "FE")}
-          , error = function(e){return(list(se = NA))
+          ma.DL <- tryCatch({
+            rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "DL")
+          },error = function(e){
+            return(list(b = NA, tau2 = NA, se = NA, I2 = NA))
+          },warning = function(w){
+            return(list(list(b = NA, tau2 = NA, se = NA, I2 = NA)))
           })
-        
-        
-        Normal.Sim[dummy.counter, `:=` (Unique_ID = counter,
-                                        FE_Estimate = ma.fe[[1]][1],
-                                        FE_se = ma.fe$se,
-                                        REML_Estimate = ma.reml$b[1],
-                                        REML_se = ma.reml$se,
-                                        REML_tau2 = ma.reml$tau2,
-                                        DL_Estimate = ma.DL[[1]][1],
-                                        DL_se = ma.DL$se,
-                                        DL_tau2 = ma.DL$tau2,
-                                        DL_I2 = ma.DL$I2,
-                                        HC_DL_se = ma.hc.DL$se,
-                                        HC_DL_CIlb = ma.hc.DL$ci.lb,
-                                        HC_DL_CIub = ma.hc.DL$ci.ub,
-                                        HC_REML_se = ma.hc.REML$se,
-                                        HC_REML_CIlb = ma.hc.REML$ci.lb,
-                                        HC_REML_CIub = ma.hc.REML$ci.ub,
-                                        KH_REML_CIlb = ma.reml.kh$ci.lb,
-                                        KH_REML_CIub = ma.reml.kh$ci.ub,
-                                        KH_REML_se = ma.reml.kh$se,
-                                        KH_DL_CIlb = ma.DL.kh$ci.lb,
-                                        KH_DL_CIub = ma.DL.kh$ci.ub,
-                                        KH_DL_se = ma.DL.kh$se,
-                                        Moreno_Estimate = moreno.est[1],
-                                        Moreno_se = moreno.est[2],
-                                        Mult_se = ma.mult$se
-        )]
-        
-        dummy.counter <- dummy.counter + 1
+          
+          # Henmi & Copas
+          
+          ma.hc.DL <- tryCatch({
+            hc(ma.DL)
+          },error = function(e){
+            return(list(se = NA, ci.lb = NA, ci.ub = NA))
+          },warning = function(w){
+            return(list(list(se = NA, ci.lb = NA, ci.ub = NA)))
+          })
+          
+          ma.hc.REML <- tryCatch({
+            mod.hc(ma.reml, tau2est = ma.reml$tau2)
+          },error = function(e){
+            return(list(se = NA, ci.lb = NA, ci.ub = NA))
+          },warning = function(w){
+            return(list(list(se = NA, ci.lb = NA, ci.ub = NA)))
+          })
+          
+          # Knapp Hartung
+          
+          ma.reml.kh <- tryCatch({
+            rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "REML", knha = TRUE, control = list(stepadj = 0.5))
+          },
+          error = function(e){
+            return(list(b = NA, tau2 = NA, se = NA, ci.lb = NA, ci.ub = NA))
+          },
+          warning = function(w){
+            return(list(b = NA, tau2 = NA, se = NA, ci.lb = NA, ci.ub = NA))
+          }
+          )
+          
+          ma.DL.kh <- tryCatch({rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2  , method = "DL", knha = TRUE)}
+                               , error = function(e){return(list(se = NA, ci.lb = NA, ci.ub = NA))
+                               })
+          
+          ## Moreno (?D-var) - not exactly clear which implementation is being used is likely equation 2a
+          moreno.est <- tryCatch({ma.moren <- regtest(ma.fe , predictor = "vi", model = "lm")
+          c(ma.moren$fit[[5]][1],ma.moren$fit[[5]][3])
+          }, error=function(err) c(NA,NA))
+          
+          ## Mawdesley
+          
+          ma.mult <- tryCatch({
+            mawd.lm <- lm(temp.data$Study_estimate ~ 1, weights = 1/(temp.data$Study_sd^2))
+            sm.mawd.lm <- summary(mawd.lm)
+            ifelse(mean(sm.mawd.lm$residuals^2) < 1, phi.est  <- 1, phi.est <- mean(sm.mawd.lm$residuals^2))
+            rma.uni(temp.data$Study_estimate, temp.data$Study_sd^2 * phi.est , method = "FE")}
+            , error = function(e){return(list(se = NA))
+            })
+          
+          
+          Normal.Sim[dummy.counter, `:=` (Unique_ID = counter,
+                                          FE_Estimate = ma.fe[[1]][1],
+                                          FE_se = ma.fe$se,
+                                          REML_Estimate = ma.reml$b[1],
+                                          REML_se = ma.reml$se,
+                                          REML_tau2 = ma.reml$tau2,
+                                          DL_Estimate = ma.DL[[1]][1],
+                                          DL_se = ma.DL$se,
+                                          DL_tau2 = ma.DL$tau2,
+                                          DL_I2 = ma.DL$I2,
+                                          HC_DL_se = ma.hc.DL$se,
+                                          HC_DL_CIlb = ma.hc.DL$ci.lb,
+                                          HC_DL_CIub = ma.hc.DL$ci.ub,
+                                          HC_REML_se = ma.hc.REML$se,
+                                          HC_REML_CIlb = ma.hc.REML$ci.lb,
+                                          HC_REML_CIub = ma.hc.REML$ci.ub,
+                                          KH_REML_CIlb = ma.reml.kh$ci.lb,
+                                          KH_REML_CIub = ma.reml.kh$ci.ub,
+                                          KH_REML_se = ma.reml.kh$se,
+                                          KH_DL_CIlb = ma.DL.kh$ci.lb,
+                                          KH_DL_CIub = ma.DL.kh$ci.ub,
+                                          KH_DL_se = ma.DL.kh$se,
+                                          Moreno_Estimate = moreno.est[1],
+                                          Moreno_se = moreno.est[2],
+                                          Mult_se = ma.mult$se
+          )]
+          
+          dummy.counter <- dummy.counter + 1
         }
       }
     }
@@ -576,7 +584,7 @@ TimeTakenAn <- proc.time() - StartTime
 
 
 #write.csv(Normal.Sim.Results, file = "NSB0V1An.csv")
-saveRDS(Normal.Sim.Results, file = "NSStepRDS")
+saveRDS(Normal.Sim.Results, file = "NSTotalOutRDS")
 
 
 ### Checking values

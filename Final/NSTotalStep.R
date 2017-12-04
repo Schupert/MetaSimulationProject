@@ -37,7 +37,7 @@ True.sd = sqrt(1)
 theta = c( -0.76,  -0.12,  0, 0.12, 0.76)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(0, 0.004, 0.067, 1.267)
+tau.sq = c(0, 0.005, 0.022, 1.676)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -345,7 +345,7 @@ mod.hc <- function(object, digits, transf, targs, control, tau2est, ...) {
 StartTime <- proc.time()
 
 registerDoParallel(c1)
-set.seed(4567)
+set.seed(3465)
 Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.table", "copula", "metafor"), 
                                .export = c("Studies", "Subj", "True.sd",
                                            "theta", "tau.sq", "controlProp", "UMD", "Severity.boundary", "Begg_a", 
@@ -407,12 +407,20 @@ Normal.Sim.Results <- foreach (m = 1:Reps, .combine=rbind, .packages = c("data.t
             Study_patientnumber <- round(rlnorm(1, meanlog = i[1], sdlog = i[2]) + 4)
           }
           
-          ## Draw from binomial how many methodological concerns study has
-          Number.of.biases <- rbinom(1, 2, 1/(Study_patientnumber^0.3))
+          repeat{
+            
+            Study_summary <- UMD(Study_patientnumber, k, l, controlProp, True.sd)
+            Study_mean <- Study_summary[1]
+            Study_StanDev <- Study_summary[2]
+            
+            Begg_p <- pnorm(Study_mean/(Study_StanDev))
+            
+            Step_weight <- ifelse(Begg_p < Severity.boundary[1], 1, ifelse(Begg_p < Severity.boundary[2], 0.75, 0.25))
+            
+            if(rbinom(1,1, Step_weight) == 1 ){break}
+            
+          }
           
-          Study_summary <- UMD(Study_patientnumber, k - Bias.multiple[Number.of.biases + 1], l, controlProp, True.sd)
-          Study_mean <- Study_summary[1]
-          Study_StanDev <- Study_summary[2]
           Study.n <- as.integer(0.5*Study_patientnumber) * 2
           
           Study_estimate[o] <- Study_mean
@@ -568,7 +576,7 @@ TimeTakenAn <- proc.time() - StartTime
 
 
 #write.csv(Normal.Sim.Results, file = "NSB0V1An.csv")
-saveRDS(Normal.Sim.Results, file = "NSTotalMethRDS")
+saveRDS(Normal.Sim.Results, file = "NSStepRDS")
 
 
 ### Checking values

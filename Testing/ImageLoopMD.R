@@ -39,7 +39,7 @@ True.sd = sqrt(1)
 theta = c( -0.76,  -0.12,  0, 0.12, 0.76)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(0, 0.004, 0.067, 1.267)
+tau.sq = c(0, 0.005, 0.022, 1.676)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5

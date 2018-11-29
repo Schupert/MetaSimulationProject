@@ -69,7 +69,7 @@ Bias.multiple <- c(0, log(0.85)/(-1.81) * 2, log(0.7225)/(-1.81) * 2)
 
 #### UMD Import data here ----
 
-system.time(Normal.Sim.Results <- readRDS(file = "NSStepRDS"))
+system.time(Normal.Sim.Results <- readRDS(file = "NSBeggRDS"))
 
 Normal.Sim.Results <- data.table(Normal.Sim.Results)
 
@@ -158,36 +158,40 @@ Normal.Sim.Results[, DL_CIub := DL_Estimate + qnorm(sig.level) * DL_se]
 # Total.results <- merge(Intermediate2, Coverage.values, by = c("Rep_theta", "Rep_NumStudies", "Rep_tau.sq", "Rep_Subj"))
 
 Total.results <- Normal.Sim.Results[, .(Bias_FE = mean(FE_Estimate, na.rm = TRUE) - Rep_theta, Bias_REML = mean(REML_Estimate, na.rm = TRUE) - Rep_theta,
-                                       Bias_DL = mean(DL_Estimate, na.rm = TRUE) - Rep_theta, Bias_Moreno = mean(Moreno_Estimate, na.rm = TRUE) - Rep_theta,
-                                       MSE_FE = mean((FE_Estimate - Rep_theta)^2, na.rm = TRUE), MSE_REML = mean((REML_Estimate - Rep_theta)^2, na.rm = TRUE),
-                                       MSE_DL = mean((DL_Estimate - Rep_theta)^2, na.rm = TRUE), "MSE Moreno" = mean((Moreno_Estimate- Rep_theta)^2, na.rm = TRUE) ,
-                                       Coverage_FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE), Coverage_REML = mean(CI.betw(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE),
-                                       Coverage_DL = mean(CI.betw(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE), Coverage_HC_DL = mean(CI.betw(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE),
-                                       Coverage_HC_REML = mean(CI.betw(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
-                                       Coverage_KH_DL = mean(CI.betw(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
-                                       Coverage_KH_REML = mean(CI.betw(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
-                                       Coverage_IVHet = mean(CI.betw(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
-                                       Coverage_Moreno = mean(CI.betw(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
-                                       Coverage_Mult = mean(CI.betw(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE),
-                                       Outside_FE = mean(CI.updown(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE), Outside_REML = mean(CI.updown(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE),
-                                       Outside_DL = mean(CI.updown(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE), Outside_HC_DL = mean(CI.updown(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE),
-                                       Outside_HC_REML = mean(CI.updown(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
-                                       Outside_KH_DL = mean(CI.updown(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
-                                       Outside_KH_REML = mean(CI.updown(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
-                                       Outside_IVHet = mean(CI.updown(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
-                                       Outside_Moreno = mean(CI.updown(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
-                                       Outside_Mult = mean(CI.updown(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE),
-                                       DL_I2 = mean(DL_I2, na.rm = TRUE)
+                                        Bias_DL = mean(DL_Estimate, na.rm = TRUE) - Rep_theta, Bias_Moreno = mean(Moreno_Estimate, na.rm = TRUE) - Rep_theta,
+                                        MSE_FE = mean((FE_Estimate - Rep_theta)^2, na.rm = TRUE), MSE_REML = mean((REML_Estimate - Rep_theta)^2, na.rm = TRUE),
+                                        MSE_DL = mean((DL_Estimate - Rep_theta)^2, na.rm = TRUE), "MSE Moreno" = mean((Moreno_Estimate- Rep_theta)^2, na.rm = TRUE) ,
+                                        Coverage_FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE), Coverage_REML = mean(CI.betw(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE),
+                                        Coverage_DL = mean(CI.betw(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE), Coverage_HC_DL = mean(CI.betw(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE),
+                                        Coverage_HC_REML = mean(CI.betw(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
+                                        Coverage_KH_DL = mean(CI.betw(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
+                                        Coverage_KH_REML = mean(CI.betw(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
+                                        Coverage_IVHet = mean(CI.betw(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
+                                        Coverage_Moreno = mean(CI.betw(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
+                                        Coverage_Mult = mean(CI.betw(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE),
+                                        Outside_FE = mean(CI.updown(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE), Outside_REML = mean(CI.updown(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE),
+                                        Outside_DL = mean(CI.updown(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE), Outside_HC_DL = mean(CI.updown(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE),
+                                        Outside_HC_REML = mean(CI.updown(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
+                                        Outside_KH_DL = mean(CI.updown(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
+                                        Outside_KH_REML = mean(CI.updown(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
+                                        Outside_IVHet = mean(CI.updown(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
+                                        Outside_Moreno = mean(CI.updown(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
+                                        Outside_Mult = mean(CI.updown(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE),
+                                        DL_I2 = mean(DL_I2, na.rm = TRUE)
 ),
 by = .(Rep_theta, Rep_NumStudies, Rep_tau.sq, Rep_Subj)]
 
-##### Add extra variable
 
-Total.results$Bias_type <- as.factor(rep("Step", dim(Total.results)[1]))
-#UMD.Complete <- Total.results
-UMD.Complete <- rbindlist(list(UMD.Complete, Total.results), use.names = TRUE, fill = FALSE)
+#### REML versus DL
 
+summary(Total.results$Bias_REML)
+summary(Total.results$Bias_DL)
 
-#### Write out ----
+a <- Normal.Sim.Results[, .(RE_diff = REML_Estimate - DL_Estimate)]
+summary(a$RE_diff)
+hist(a$RE_diff)
 
-write.csv(UMD.Complete, "UMDResults.csv")
+Normal.Sim.Results[which.max(a$RE_diff)]
+
+b <- Normal.Sim.Results[, .(RE_diff = mean(REML_Estimate - DL_Estimate, na.rm = TRUE)), by = .(Rep_theta, Rep_NumStudies, Rep_tau.sq, Rep_Subj)]
+summary(b$RE_diff)

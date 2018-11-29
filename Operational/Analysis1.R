@@ -39,7 +39,7 @@ True.sd = sqrt(1)
 theta = c( -0.76,  -0.12,  0, 0.12, 0.76)
 
 # tau.sq = between studies variance (can be squared due to sqrt() in normal draw), ?to be distributed
-tau.sq = c(0, 0.004, 0.067, 1.267)
+tau.sq = c(0, 0.005, 0.022, 1.676)
 
 # controlProp = proportion of total sample in control arm
 controlProp = 0.5
@@ -113,11 +113,11 @@ Normal.Sim.Results <- data.table(Normal.Sim.Results)
 
 sig.level <- (1 - 0.05/2)
 
-An.Cond <- Normal.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[1] & Rep_Subj == 250]
+An.Cond <- Normal.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[4] & Rep_Subj == 4.2]
 
 #### LOR Import data here ----
 
-system.time(LogOR.Sim.Results <- readRDS(file = "LSTotalBeggRDS"))
+system.time(LogOR.Sim.Results <- readRDS(file = "LSTotalV2RDS"))
 
 LogOR.Sim.Results <- data.table(LogOR.Sim.Results)
 #### LOR Select subset of data for analysis ----
@@ -129,26 +129,49 @@ An.Cond <- LogOR.Sim.Results[Rep_theta == theta[5] & Rep_tau.sq == tau.sq[4] & R
 
 #### Calculate CI values -----
 
-## There may be cleaner way to do this with data.table
-An.Cond$FE_CIlb <- An.Cond$FE_Estimate - qnorm(sig.level) * An.Cond$FE_se
-An.Cond$FE_CIub <- An.Cond$FE_Estimate + qnorm(sig.level) * An.Cond$FE_se
+# ## There may be cleaner way to do this with data.table
+# An.Cond$FE_CIlb <- An.Cond$FE_Estimate - qnorm(sig.level) * An.Cond$FE_se
+# An.Cond$FE_CIub <- An.Cond$FE_Estimate + qnorm(sig.level) * An.Cond$FE_se
+# 
+# An.Cond$REML_CIlb <- An.Cond$REML_Estimate - qnorm(sig.level) * An.Cond$REML_se
+# An.Cond$REML_CIub <- An.Cond$REML_Estimate + qnorm(sig.level) * An.Cond$REML_se
+# 
+# An.Cond$DL_CIlb <- An.Cond$DL_Estimate - qnorm(sig.level) * An.Cond$DL_se
+# An.Cond$DL_CIub <- An.Cond$DL_Estimate + qnorm(sig.level) * An.Cond$DL_se
+# 
+# An.Cond$Doi_CIlb <- An.Cond$FE_Estimate - qnorm(sig.level) * An.Cond$HC_DL_se
+# An.Cond$Doi_CIub <- An.Cond$FE_Estimate + qnorm(sig.level) * An.Cond$HC_DL_se
+# 
+# ### Does Moreno use z-score?
+# 
+# An.Cond$Moreno_CIlb <- An.Cond$Moreno_Estimate - qnorm(sig.level) * An.Cond$Moreno_se
+# An.Cond$Moreno_CIub <- An.Cond$Moreno_Estimate + qnorm(sig.level) * An.Cond$Moreno_se
+# 
+# An.Cond$Mult_CIlb <- An.Cond$FE_Estimate - qnorm(sig.level) * An.Cond$Mult_se
+# An.Cond$Mult_CIub <- An.Cond$FE_Estimate + qnorm(sig.level) * An.Cond$Mult_se
 
-An.Cond$REML_CIlb <- An.Cond$REML_Estimate - qnorm(sig.level) * An.Cond$REML_se
-An.Cond$REML_CIub <- An.Cond$REML_Estimate + qnorm(sig.level) * An.Cond$REML_se
+## Data.table method
 
-An.Cond$DL_CIlb <- An.Cond$DL_Estimate - qnorm(sig.level) * An.Cond$DL_se
-An.Cond$DL_CIub <- An.Cond$DL_Estimate + qnorm(sig.level) * An.Cond$DL_se
+An.Cond[, FE_CIlb := FE_Estimate - qnorm(sig.level) * FE_se]
+An.Cond[, FE_CIub := FE_Estimate + qnorm(sig.level) * FE_se]
 
-An.Cond$Doi_CIlb <- An.Cond$FE_Estimate - qnorm(sig.level) * An.Cond$HC_DL_se
-An.Cond$Doi_CIub <- An.Cond$FE_Estimate + qnorm(sig.level) * An.Cond$HC_DL_se
+An.Cond[, REML_CIlb := REML_Estimate - qnorm(sig.level) * REML_se]
+An.Cond[, REML_CIub := REML_Estimate + qnorm(sig.level) * REML_se]
+
+An.Cond[, Doi_CIlb := FE_Estimate - qnorm(sig.level) * HC_DL_se]
+An.Cond[, Doi_CIub := FE_Estimate + qnorm(sig.level) * HC_DL_se]
 
 ### Does Moreno use z-score?
 
-An.Cond$Moreno_CIlb <- An.Cond$Moreno_Estimate - qnorm(sig.level) * An.Cond$Moreno_se
-An.Cond$Moreno_CIub <- An.Cond$Moreno_Estimate + qnorm(sig.level) * An.Cond$Moreno_se
+An.Cond[, Moreno_CIlb := Moreno_Estimate - qnorm(sig.level) * Moreno_se]
+An.Cond[, Moreno_CIub := Moreno_Estimate + qnorm(sig.level) * Moreno_se]
 
-An.Cond$Mult_CIlb <- An.Cond$FE_Estimate - qnorm(sig.level) * An.Cond$Mult_se
-An.Cond$Mult_CIub <- An.Cond$FE_Estimate + qnorm(sig.level) * An.Cond$Mult_se
+An.Cond[, Mult_CIlb := FE_Estimate - qnorm(sig.level) * Mult_se]
+An.Cond[, Mult_CIub := FE_Estimate + qnorm(sig.level) * Mult_se]
+
+
+An.Cond[, DL_CIlb := DL_Estimate - qnorm(sig.level) * DL_se]
+An.Cond[, DL_CIub := DL_Estimate + qnorm(sig.level) * DL_se]
 
 
 #### Bias ----
@@ -203,7 +226,121 @@ MSE2.plot <- qplot(Rep_NumStudies, value, colour = variable, geom = "line", data
 MSE2.plot
 
 
+#### MSE by theta ----
+
+An.Cond <- Normal.Sim.Results[Rep_NumStudies == Studies[1] & Rep_tau.sq == tau.sq[4] & Rep_Subj == 4.2]
+
+
+MSE1.values <- An.Cond[, .(FE = mean((FE_Estimate - Rep_theta)^2, na.rm = TRUE), REML = mean((REML_Estimate - Rep_theta)^2, na.rm = TRUE),
+                           DL = mean((DL_Estimate - Rep_theta)^2, na.rm = TRUE), Moreno = mean((Moreno_Estimate- Rep_theta)^2, na.rm = TRUE) ),
+                       by = .(Rep_theta, Rep_NumStudies)]
+
+MSE1.values2 <- melt(MSE1.values, id = c("Rep_theta", "Rep_NumStudies"))
+
+MSE1.plot <- ggplot(MSE1.values2, aes(x = as.factor(Rep_theta), y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + 
+  xlab("Number of Studies") + ylab("MSE") + scale_colour_grey() + 
+  scale_linetype_manual(values=c("solid", "dotted", "dotdash", "longdash"), name = "Estimator") #+ coord_cartesian(ylim = c(0, 0.75))
+
+MSE1.plot
+
+## attempt by theta and tau.sq
+
+An.Cond <- Normal.Sim.Results[Rep_NumStudies == Studies[1] & Rep_Subj == 4.2]
+
+
+MSE1.values <- An.Cond[, .(FE = mean((FE_Estimate - Rep_theta)^2, na.rm = TRUE), REML = mean((REML_Estimate - Rep_theta)^2, na.rm = TRUE),
+                           DL = mean((DL_Estimate - Rep_theta)^2, na.rm = TRUE), Moreno = mean((Moreno_Estimate- Rep_theta)^2, na.rm = TRUE) ),
+                       by = .(Rep_theta, Rep_tau.sq)]
+
+MSE1.values2 <- melt(MSE1.values, id = c("Rep_theta", "Rep_tau.sq"))
+
+MSE1.plot <- ggplot(MSE1.values2, aes(x = as.factor(Rep_theta), y = value, group = variable, colour = as.factor(Rep_tau.sq))) +
+  geom_point(aes(shape = variable), size = 1)  +  #theme_bw()+
+  xlab("Theta") + ylab("MSE")  + # scale_colour_grey()+
+  scale_linetype_manual(values=c("solid", "dotted", "dotdash", "longdash"), name = "Estimator") + facet_grid(~ as.factor(tau.sq))#+ coord_cartesian(ylim = c(0, 1))
+
+MSE1.plot
+
+# ?remove outliers in Moreno estimate
+
+An.Cond <- Normal.Sim.Results[Rep_NumStudies == Studies[1] & Rep_Subj == 4.2 & Moreno_Estimate < 20 &
+                                Moreno_Estimate > (-20)]
+
+
+MSE1.values <- An.Cond[, .(FE = mean((FE_Estimate - Rep_theta)^2, na.rm = TRUE), REML = mean((REML_Estimate - Rep_theta)^2, na.rm = TRUE),
+                           DL = mean((DL_Estimate - Rep_theta)^2, na.rm = TRUE), Moreno = mean((Moreno_Estimate- Rep_theta)^2, na.rm = TRUE) ),
+                       by = .(Rep_theta, Rep_tau.sq)]
+
+MSE1.values2 <- melt(MSE1.values, id = c("Rep_theta", "Rep_tau.sq"))
+
+MSE1.plot <- ggplot(MSE1.values2, aes(x = as.factor(Rep_theta), y = value, group = variable, colour = as.factor(Rep_tau.sq))) +
+  geom_point(aes(shape = variable), size = 1)  +  #theme_bw()+
+  xlab("Theta") + ylab("MSE")  + # scale_colour_grey()+
+  scale_linetype_manual(values=c("solid", "dotted", "dotdash", "longdash"), name = "Estimator") + facet_grid(~ as.factor(tau.sq))#+ coord_cartesian(ylim = c(0, 1))
+
+MSE1.plot
+
+
+#### MSE by sample size -----
+
+An.Cond <- Normal.Sim.Results[Rep_theta == theta[1] & Rep_NumStudies == Studies[1] & Rep_tau.sq == tau.sq[1]]
+
+
+MSE1.values <- An.Cond[, .(FE = mean((FE_Estimate - Rep_theta)^2, na.rm = TRUE), REML = mean((REML_Estimate - Rep_theta)^2, na.rm = TRUE),
+                           DL = mean((DL_Estimate - Rep_theta)^2, na.rm = TRUE), Moreno = mean((Moreno_Estimate- Rep_theta)^2, na.rm = TRUE) ),
+                       by = .(Rep_theta, Rep_Subj)]
+
+MSE1.values2 <- melt(MSE1.values, id = c("Rep_theta", "Rep_Subj"))
+
+MSE1.plot <- ggplot(MSE1.values2, aes(x = as.factor(Rep_Subj), y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + 
+  xlab("Number of Studies") + ylab("MSE") + scale_colour_grey() + 
+  scale_linetype_manual(values=c("solid", "dotted", "dotdash", "longdash"), name = "Estimator") #+ coord_cartesian(ylim = c(0, 0.75))
+
+MSE1.plot
+
+#### MSE by tau2 -----
+
+An.Cond <- Normal.Sim.Results[Rep_theta == theta[1] & Rep_NumStudies == Studies[5] & Rep_Subj == 4.2]
+
+MSE1.values <- An.Cond[, .(FE = mean((FE_Estimate - Rep_theta)^2, na.rm = TRUE), REML = mean((REML_Estimate - Rep_theta)^2, na.rm = TRUE),
+                           DL = mean((DL_Estimate - Rep_theta)^2, na.rm = TRUE), Moreno = mean((Moreno_Estimate- Rep_theta)^2, na.rm = TRUE) ),
+                       by = .(Rep_theta, Rep_tau.sq)]
+
+MSE1.values2 <- melt(MSE1.values, id = c("Rep_theta", "Rep_tau.sq"))
+
+MSE1.plot <- ggplot(MSE1.values2, aes(x = as.factor(Rep_tau.sq), y = value, group = variable)) + geom_line(aes(linetype = variable), size = 1) + theme_bw() + 
+  xlab("Number of Studies") + ylab("MSE") + scale_colour_grey() + 
+  scale_linetype_manual(values=c("solid", "dotted", "dotdash", "longdash"), name = "Estimator") #+ coord_cartesian(ylim = c(0, 0.75))
+
+MSE1.plot
+
+
 #### Coverage ---- 
+
+An.Cond <- Normal.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[4] & Rep_Subj == 4.2]
+
+## Data.table method
+
+An.Cond[, FE_CIlb := FE_Estimate - qnorm(sig.level) * FE_se]
+An.Cond[, FE_CIub := FE_Estimate + qnorm(sig.level) * FE_se]
+
+An.Cond[, REML_CIlb := REML_Estimate - qnorm(sig.level) * REML_se]
+An.Cond[, REML_CIub := REML_Estimate + qnorm(sig.level) * REML_se]
+
+An.Cond[, Doi_CIlb := FE_Estimate - qnorm(sig.level) * HC_DL_se]
+An.Cond[, Doi_CIub := FE_Estimate + qnorm(sig.level) * HC_DL_se]
+
+### Does Moreno use z-score?
+
+An.Cond[, Moreno_CIlb := Moreno_Estimate - qnorm(sig.level) * Moreno_se]
+An.Cond[, Moreno_CIub := Moreno_Estimate + qnorm(sig.level) * Moreno_se]
+
+An.Cond[, Mult_CIlb := FE_Estimate - qnorm(sig.level) * Mult_se]
+An.Cond[, Mult_CIub := FE_Estimate + qnorm(sig.level) * Mult_se]
+
+
+An.Cond[, DL_CIlb := DL_Estimate - qnorm(sig.level) * DL_se]
+An.Cond[, DL_CIub := DL_Estimate + qnorm(sig.level) * DL_se]
 
 Coverage.values <- An.Cond[, .(FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE), REML = mean(CI.betw(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE),
                                DL = mean(CI.betw(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE), "HC DL" = mean(CI.betw(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE),
@@ -230,7 +367,250 @@ Coverage.plot <- ggplot(Coverage.values2, aes(x = Rep_NumStudies, y = value, gro
   ylab("Coverage") + xlab("Number of studies") + scale_colour_grey() + coord_cartesian(ylim = c(0.9, 1)) + geom_point(aes(shape = variable))
 Coverage.plot
 
+#### Coverage by theta ----
 
+An.Cond <- Normal.Sim.Results[Rep_NumStudies == Studies[5] & Rep_tau.sq == tau.sq[1] & Rep_Subj == 4.2]
+
+## Data.table method
+
+An.Cond[, FE_CIlb := FE_Estimate - qnorm(sig.level) * FE_se]
+An.Cond[, FE_CIub := FE_Estimate + qnorm(sig.level) * FE_se]
+
+An.Cond[, REML_CIlb := REML_Estimate - qnorm(sig.level) * REML_se]
+An.Cond[, REML_CIub := REML_Estimate + qnorm(sig.level) * REML_se]
+
+An.Cond[, Doi_CIlb := FE_Estimate - qnorm(sig.level) * HC_DL_se]
+An.Cond[, Doi_CIub := FE_Estimate + qnorm(sig.level) * HC_DL_se]
+
+### Does Moreno use z-score?
+
+An.Cond[, Moreno_CIlb := Moreno_Estimate - qnorm(sig.level) * Moreno_se]
+An.Cond[, Moreno_CIub := Moreno_Estimate + qnorm(sig.level) * Moreno_se]
+
+An.Cond[, Mult_CIlb := FE_Estimate - qnorm(sig.level) * Mult_se]
+An.Cond[, Mult_CIub := FE_Estimate + qnorm(sig.level) * Mult_se]
+
+
+An.Cond[, DL_CIlb := DL_Estimate - qnorm(sig.level) * DL_se]
+An.Cond[, DL_CIub := DL_Estimate + qnorm(sig.level) * DL_se]
+
+Coverage.values <- An.Cond[, .(FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE), REML = mean(CI.betw(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE),
+                               DL = mean(CI.betw(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE), "HC DL" = mean(CI.betw(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE),
+                               "HC REML" = mean(CI.betw(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
+                               "KH DL" = mean(CI.betw(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
+                               "KH REML" = mean(CI.betw(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
+                               IVHet = mean(CI.betw(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
+                               Moreno = mean(CI.betw(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
+                               Mult = mean(CI.betw(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE)
+),
+by = .(Rep_theta, Rep_NumStudies)]
+
+Coverage.values2<- melt(Coverage.values, id = c("Rep_theta", "Rep_NumStudies"))
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = Rep_theta, y = value, colour = variable)) + geom_point( size = 1) +
+  ylab("Coverage") + xlab("Number of studies") + coord_cartesian(ylim = c(0.9, 1))
+Coverage.plot
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = as.factor(Rep_theta), y = value, colour = variable)) + geom_point( size = 2) +
+  ylab("Coverage") + xlab("Number of studies") + coord_cartesian(ylim = c(0.9, 1))
+Coverage.plot
+
+
+#### Coverage Across all number of studies ----
+
+An.Cond <- Normal.Sim.Results[Rep_tau.sq == tau.sq[1] & Rep_Subj == 4.2]
+
+## Data.table method
+
+An.Cond[, FE_CIlb := FE_Estimate - qnorm(sig.level) * FE_se]
+An.Cond[, FE_CIub := FE_Estimate + qnorm(sig.level) * FE_se]
+
+An.Cond[, REML_CIlb := REML_Estimate - qnorm(sig.level) * REML_se]
+An.Cond[, REML_CIub := REML_Estimate + qnorm(sig.level) * REML_se]
+
+An.Cond[, Doi_CIlb := FE_Estimate - qnorm(sig.level) * HC_DL_se]
+An.Cond[, Doi_CIub := FE_Estimate + qnorm(sig.level) * HC_DL_se]
+
+### Does Moreno use z-score?
+
+An.Cond[, Moreno_CIlb := Moreno_Estimate - qnorm(sig.level) * Moreno_se]
+An.Cond[, Moreno_CIub := Moreno_Estimate + qnorm(sig.level) * Moreno_se]
+
+An.Cond[, Mult_CIlb := FE_Estimate - qnorm(sig.level) * Mult_se]
+An.Cond[, Mult_CIub := FE_Estimate + qnorm(sig.level) * Mult_se]
+
+
+An.Cond[, DL_CIlb := DL_Estimate - qnorm(sig.level) * DL_se]
+An.Cond[, DL_CIub := DL_Estimate + qnorm(sig.level) * DL_se]
+
+Coverage.values <- An.Cond[, .(FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE), REML = mean(CI.betw(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE),
+                               DL = mean(CI.betw(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE), "HC DL" = mean(CI.betw(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE),
+                               "HC REML" = mean(CI.betw(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
+                               "KH DL" = mean(CI.betw(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
+                               "KH REML" = mean(CI.betw(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
+                               IVHet = mean(CI.betw(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
+                               Moreno = mean(CI.betw(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
+                               Mult = mean(CI.betw(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE)
+),
+by = .(Rep_theta)]
+
+Coverage.values2<- melt(Coverage.values, id = c("Rep_theta"))
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = Rep_theta, y = value, colour = variable)) + geom_point( size = 1) +
+  ylab("Coverage") + xlab("Number of studies") + coord_cartesian(ylim = c(0.9, 1))
+Coverage.plot
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = as.factor(Rep_theta), y = value, colour = variable)) + geom_point( size = 2) +
+  ylab("Coverage") + xlab("Number of studies") + coord_cartesian(ylim = c(0.9, 1))
+Coverage.plot
+
+#### Coverage across all numbers of studies and thetas by tau2 ----
+
+An.Cond <- Normal.Sim.Results[Rep_Subj == 4.2]
+
+## Data.table method
+
+An.Cond[, FE_CIlb := FE_Estimate - qnorm(sig.level) * FE_se]
+An.Cond[, FE_CIub := FE_Estimate + qnorm(sig.level) * FE_se]
+
+An.Cond[, REML_CIlb := REML_Estimate - qnorm(sig.level) * REML_se]
+An.Cond[, REML_CIub := REML_Estimate + qnorm(sig.level) * REML_se]
+
+An.Cond[, Doi_CIlb := FE_Estimate - qnorm(sig.level) * HC_DL_se]
+An.Cond[, Doi_CIub := FE_Estimate + qnorm(sig.level) * HC_DL_se]
+
+### Does Moreno use z-score?
+
+An.Cond[, Moreno_CIlb := Moreno_Estimate - qnorm(sig.level) * Moreno_se]
+An.Cond[, Moreno_CIub := Moreno_Estimate + qnorm(sig.level) * Moreno_se]
+
+An.Cond[, Mult_CIlb := FE_Estimate - qnorm(sig.level) * Mult_se]
+An.Cond[, Mult_CIub := FE_Estimate + qnorm(sig.level) * Mult_se]
+
+
+An.Cond[, DL_CIlb := DL_Estimate - qnorm(sig.level) * DL_se]
+An.Cond[, DL_CIub := DL_Estimate + qnorm(sig.level) * DL_se]
+
+Coverage.values <- An.Cond[, .(FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE), REML = mean(CI.betw(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE),
+                               DL = mean(CI.betw(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE), "HC DL" = mean(CI.betw(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE),
+                               "HC REML" = mean(CI.betw(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
+                               "KH DL" = mean(CI.betw(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
+                               "KH REML" = mean(CI.betw(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
+                               IVHet = mean(CI.betw(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
+                               Moreno = mean(CI.betw(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
+                               Mult = mean(CI.betw(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE)
+),
+by = .(Rep_tau.sq)]
+
+Coverage.values2<- melt(Coverage.values, id = c("Rep_tau.sq"))
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = Rep_tau.sq, y = value, colour = variable)) + geom_point( size = 1) +
+  ylab("Coverage") + xlab("Number of studies") + coord_cartesian(ylim = c(0.9, 1))
+Coverage.plot
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = as.factor(Rep_tau.sq), y = value, colour = variable)) + geom_point( size = 2) +
+  ylab("Coverage") + xlab("Number of studies") + coord_cartesian(ylim = c(0.9, 1))
+Coverage.plot
+
+#### Coverage all thetas, by tau2 and number of studies ----
+
+An.Cond <- Normal.Sim.Results[Rep_Subj == 4.2]
+
+## Data.table method
+
+An.Cond[, FE_CIlb := FE_Estimate - qnorm(sig.level) * FE_se]
+An.Cond[, FE_CIub := FE_Estimate + qnorm(sig.level) * FE_se]
+
+An.Cond[, REML_CIlb := REML_Estimate - qnorm(sig.level) * REML_se]
+An.Cond[, REML_CIub := REML_Estimate + qnorm(sig.level) * REML_se]
+
+An.Cond[, Doi_CIlb := FE_Estimate - qnorm(sig.level) * HC_DL_se]
+An.Cond[, Doi_CIub := FE_Estimate + qnorm(sig.level) * HC_DL_se]
+
+### Does Moreno use z-score?
+
+An.Cond[, Moreno_CIlb := Moreno_Estimate - qnorm(sig.level) * Moreno_se]
+An.Cond[, Moreno_CIub := Moreno_Estimate + qnorm(sig.level) * Moreno_se]
+
+An.Cond[, Mult_CIlb := FE_Estimate - qnorm(sig.level) * Mult_se]
+An.Cond[, Mult_CIub := FE_Estimate + qnorm(sig.level) * Mult_se]
+
+
+An.Cond[, DL_CIlb := DL_Estimate - qnorm(sig.level) * DL_se]
+An.Cond[, DL_CIub := DL_Estimate + qnorm(sig.level) * DL_se]
+
+Coverage.values <- An.Cond[, .(FE = mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE), REML = mean(CI.betw(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE),
+                               DL = mean(CI.betw(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE), "HC DL" = mean(CI.betw(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE),
+                               "HC REML" = mean(CI.betw(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE),
+                               "KH DL" = mean(CI.betw(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE),
+                               "KH REML" = mean(CI.betw(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE),
+                               IVHet = mean(CI.betw(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE),
+                               Moreno = mean(CI.betw(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE),
+                               Mult = mean(CI.betw(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE)
+),
+by = .(Rep_tau.sq, Rep_NumStudies)]
+
+Coverage.values2<- melt(Coverage.values, id = c("Rep_tau.sq", "Rep_NumStudies"))
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = Rep_NumStudies, y = value, colour = variable)) + geom_point( size = 1) +
+  ylab("Coverage") + xlab("Number of studies") + coord_cartesian(ylim = c(0.9, 1)) + facet_grid(. ~ Rep_tau.sq)
+Coverage.plot
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = as.factor(Rep_NumStudies), y = value, colour = variable)) + geom_point( size = 2) +
+  ylab("Coverage") + xlab("Number of studies") + coord_cartesian(ylim = c(0.9, 1)) + facet_grid(. ~ Rep_tau.sq)
+Coverage.plot
+
+#### Coverage based MSE variant ----
+# This isn't super legitimate since it uses agregate values from a binary measure (between)
+# Perhaps isn't too bad becuase extremely unlikely to exactly be 0.95
+
+An.Cond <- Normal.Sim.Results[Rep_Subj == 4.2]
+
+## Data.table method
+
+An.Cond[, FE_CIlb := FE_Estimate - qnorm(sig.level) * FE_se]
+An.Cond[, FE_CIub := FE_Estimate + qnorm(sig.level) * FE_se]
+
+An.Cond[, REML_CIlb := REML_Estimate - qnorm(sig.level) * REML_se]
+An.Cond[, REML_CIub := REML_Estimate + qnorm(sig.level) * REML_se]
+
+An.Cond[, Doi_CIlb := FE_Estimate - qnorm(sig.level) * HC_DL_se]
+An.Cond[, Doi_CIub := FE_Estimate + qnorm(sig.level) * HC_DL_se]
+
+### Does Moreno use z-score?
+
+An.Cond[, Moreno_CIlb := Moreno_Estimate - qnorm(sig.level) * Moreno_se]
+An.Cond[, Moreno_CIub := Moreno_Estimate + qnorm(sig.level) * Moreno_se]
+
+An.Cond[, Mult_CIlb := FE_Estimate - qnorm(sig.level) * Mult_se]
+An.Cond[, Mult_CIub := FE_Estimate + qnorm(sig.level) * Mult_se]
+
+
+An.Cond[, DL_CIlb := DL_Estimate - qnorm(sig.level) * DL_se]
+An.Cond[, DL_CIub := DL_Estimate + qnorm(sig.level) * DL_se]
+
+Coverage.values <- An.Cond[, .(FE = (0.95 - mean(CI.betw(Rep_theta, FE_CIlb, FE_CIub), na.rm = TRUE))^2, 
+                               REML = (0.95 - mean(CI.betw(Rep_theta, REML_CIlb, REML_CIub), na.rm = TRUE))^2,
+                               DL = (0.95 - mean(CI.betw(Rep_theta, DL_CIlb, DL_CIub), na.rm = TRUE))^2, 
+                               "HC DL" = (0.95 - mean(CI.betw(Rep_theta, HC_DL_CIlb, HC_DL_CIub), na.rm = TRUE))^2,
+                               "HC REML" = (0.95 - mean(CI.betw(Rep_theta, HC_REML_CIlb, HC_REML_CIub), na.rm = TRUE))^2,
+                               "KH DL" = (0.95 - mean(CI.betw(Rep_theta, KH_DL_CIlb, KH_DL_CIub), na.rm = TRUE))^2,
+                               "KH REML" = (0.95 - mean(CI.betw(Rep_theta, KH_REML_CIlb, KH_REML_CIub), na.rm = TRUE))^2,
+                               IVHet = (0.95 - mean(CI.betw(Rep_theta, Doi_CIlb, Doi_CIub), na.rm = TRUE))^2,
+                               Moreno = (0.95 - mean(CI.betw(Rep_theta, Moreno_CIlb, Moreno_CIub), na.rm = TRUE))^2,
+                               Mult = (0.95 - mean(CI.betw(Rep_theta, Mult_CIlb, Mult_CIub), na.rm = TRUE))^2
+),
+by = .(Rep_tau.sq, Rep_NumStudies)]
+
+Coverage.values2<- melt(Coverage.values, id = c("Rep_tau.sq", "Rep_NumStudies"))
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = Rep_NumStudies, y = value, colour = variable)) + geom_point(size = 1, position=position_dodge(width = .5)) +
+  ylab("Coverage") + xlab("Number of studies") + facet_grid(. ~ Rep_tau.sq) #+ coord_cartesian(ylim = c(0.9, 1))
+Coverage.plot
+
+Coverage.plot <- ggplot(Coverage.values2, aes(x = as.factor(Rep_NumStudies), y = value, colour = variable)) + geom_point( size = 2, position=position_dodge(width = .5)) +
+  ylab("Coverage") + xlab("Number of studies") + facet_grid(. ~ Rep_tau.sq) + coord_cartesian(ylim = c(0, 0.001))
+Coverage.plot
 
 #### Testing stargazer -----
 
@@ -326,7 +706,8 @@ plot(aov1) # diagnostic plots
 
 ## FE Bias
 
-Normal.Sim.Results$FE_Bias <- Normal.Sim.Results$FE_Estimate - Normal.Sim.Results$Rep_theta
+#Normal.Sim.Results$FE_Bias <- Normal.Sim.Results$FE_Estimate - Normal.Sim.Results$Rep_theta
+Normal.Sim.Results[, FE_Bias := (FE_Estimate - Rep_theta)]
 
 model1 <- lm(FE_Bias ~ as.factor(Rep_NumStudies) + 
                as.factor(Rep_tau.sq) + as.factor(Rep_Subj) + as.factor(Rep_theta), data = Normal.Sim.Results)
@@ -338,7 +719,8 @@ rm(model1)
 
 ## DL Bias
 
-Normal.Sim.Results$DL_Bias <- Normal.Sim.Results$DL_Estimate - Normal.Sim.Results$Rep_theta
+#Normal.Sim.Results$DL_Bias <- Normal.Sim.Results$DL_Estimate - Normal.Sim.Results$Rep_theta
+Normal.Sim.Results[, DL_Bias := (DL_Estimate - Rep_theta)]
 
 model1 <- lm(DL_Bias ~ as.factor(Rep_NumStudies) + 
                as.factor(Rep_tau.sq) + as.factor(Rep_Subj) + as.factor(Rep_theta), data = Normal.Sim.Results)
@@ -350,7 +732,8 @@ rm(model1)
 
 ## FE MSE
 
-Normal.Sim.Results$FE_MSE <- (Normal.Sim.Results$FE_Estimate - Normal.Sim.Results$Rep_theta)^2
+#Normal.Sim.Results$FE_MSE <- (Normal.Sim.Results$FE_Estimate - Normal.Sim.Results$Rep_theta)^2
+Normal.Sim.Results[, FE_MSE := (FE_Estimate - Rep_theta)^2]
 
 model2 <- lm(FE_MSE ~ as.factor(Rep_NumStudies) + 
                as.factor(Rep_tau.sq) + as.factor(Rep_Subj) + as.factor(Rep_theta), data = Normal.Sim.Results)
@@ -360,9 +743,43 @@ stargazer(model2, no.space=TRUE, single.row=TRUE)
 
 rm(model2)
 
+library(rpart)
+
+model3 <- rpart(FE_MSE ~ as.factor(Rep_NumStudies) + 
+                  as.factor(Rep_tau.sq) + as.factor(Rep_Subj) + as.factor(Rep_theta), 
+                data = Normal.Sim.Results, control=rpart.control(minsplit=2, minbucket=1, cp=0.001))
+summary(model3)
+plot(model3)
+text(model3)
+
+plotcp(model3)
+
+library(rattle)
+
+fancyRpartPlot(model3)
+
+rm(model3)
+
+## further tree attempt with continuous values - gives same splits
+
+
+model3 <- rpart(FE_MSE ~ Rep_NumStudies + 
+                  Rep_tau.sq + as.factor(Rep_Subj) + Rep_theta, 
+                data = Normal.Sim.Results, control=rpart.control(minsplit=2, minbucket=1, cp=0.001))
+summary(model3)
+plot(model3)
+text(model3)
+
+plotcp(model3)
+
+fancyRpartPlot(model3)
+
+rm(model3)
+
 ## DL MSE
 
-Normal.Sim.Results$DL_MSE <- (Normal.Sim.Results$DL_Estimate - Normal.Sim.Results$Rep_theta)^2
+#Normal.Sim.Results$DL_MSE <- (Normal.Sim.Results$DL_Estimate - Normal.Sim.Results$Rep_theta)^2
+Normal.Sim.Results[, DL_MSE := (DL_Estimate - Rep_theta)^2]
 
 model2 <- lm(DL_MSE ~ as.factor(Rep_NumStudies) + 
                as.factor(Rep_tau.sq) + as.factor(Rep_Subj) + as.factor(Rep_theta), data = Normal.Sim.Results)
@@ -372,6 +789,23 @@ stargazer(model2, no.space=TRUE, single.row=TRUE)
 
 rm(model2)
 
+## Moreno
+
+Normal.Sim.Results[, Moreno_MSE := (Moreno_Estimate - Rep_theta)^2]
+
+
+model3 <- rpart(Moreno_MSE ~ as.factor(Rep_NumStudies) + 
+                  as.factor(Rep_tau.sq) + as.factor(Rep_Subj) + as.factor(Rep_theta), 
+                data = Normal.Sim.Results, control=rpart.control(minsplit=2, minbucket=1, cp=0.001))
+summary(model3)
+plot(model3)
+text(model3)
+
+plotcp(model3)
+
+fancyRpartPlot(model3)
+
+rm(model3)
 
 ### Attempt including type of metric
 Normal.Sim.Results$FE_MSE <- (Normal.Sim.Results$FE_Estimate - Normal.Sim.Results$Rep_theta)^2
@@ -389,6 +823,41 @@ summary(model2)
 stargazer(model2, no.space=TRUE, single.row=TRUE)
 
 rm(model2)
+
+### Tree attempt
+library(rpart)
+
+model3 <- rpart(value ~ as.factor(Rep_NumStudies) + as.factor(variable) + 
+                  as.factor(Rep_tau.sq) + as.factor(Rep_Subj) + as.factor(Rep_theta), 
+                data = dummy.table, control=rpart.control(minsplit=2, minbucket=1, cp=0.001))
+summary(model3)
+plot(model3)
+text(model3)
+
+plotcp(model3)
+
+library(rattle)
+
+fancyRpartPlot(model3)
+
+rm(model3)
+
+# library(caret)
+# 
+# dummy.table <- na.omit(dummy.table)
+# 
+# set.seed(1)
+# train.index <- createDataPartition(dummy.table$value, p = .0001, list = FALSE)
+# train <- dummy.table[ train.index,]
+# 
+# # Ward Hierarchical Clustering
+# d <- dist(train, method = "euclidean") # distance matrix
+# fit <- hclust(d, method="ward")
+# plot(fit) # display dendogram
+# groups <- cutree(fit, k=5) # cut tree into 5 clusters
+# # draw dendogram with red borders around the 5 clusters
+# rect.hclust(fit, k=5, border="red") 
+
 rm(dummy.table)
 
 ##### LOR Model attempt -----
@@ -472,11 +941,172 @@ stargazer(Outside.values[, -1, with = FALSE ], summary = FALSE, rownames = FALSE
 
 #### Checking I2 ----
 
-summary(Normal.Sim.Results[Rep_tau.sq == tau.sq[4]]$DL_I2)
-hist(Normal.Sim.Results[Rep_tau.sq == tau.sq[4]]$DL_I2)
+summary(Normal.Sim.Results[Rep_tau.sq == tau.sq[1]]$DL_I2)
+hist(Normal.Sim.Results[Rep_tau.sq == tau.sq[1]]$DL_I2)
 
-summary(LogOR.Sim.Results[Rep_tau.sq == tau.sq[4]]$DL_I2)
-hist(LogOR.Sim.Results[Rep_tau.sq == tau.sq[4]]$DL_I2)
+summary(LogOR.Sim.Results[Rep_tau.sq == tau.sq[1]]$DL_I2)
+hist(LogOR.Sim.Results[Rep_tau.sq == tau.sq[1]]$DL_I2)
 
-##### Early testing ----
+##### New boxplots ----
 
+## Bias
+
+Bias.values.total <- An.Cond[, .(FE = FE_Estimate - Rep_theta, REML = REML_Estimate - Rep_theta,
+                           DL = DL_Estimate - Rep_theta, Moreno = Moreno_Estimate - Rep_theta),
+                       by = .(Rep_theta, Rep_NumStudies)]
+
+
+Bias.values.total2 <- melt(Bias.values.total, id = c("Rep_theta", "Rep_NumStudies"))
+
+
+
+p10 <- ggplot(Bias.values.total2, aes(x = as.factor(Rep_NumStudies), y = value, fill = variable)) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") + xlab("Number of studies") + ylab("Bias") + 
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))
+p10
+
+p10 <- ggplot(Bias.values.total2, aes(x = variable, y = value, fill = as.factor(Rep_NumStudies))) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))
+p10
+
+
+## By theta
+
+#An.Cond <- Normal.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[1] & Rep_Subj == 4.2]
+An.Cond <- Normal.Sim.Results[Rep_tau.sq == tau.sq[1] & Rep_Subj == 4.2 & Rep_NumStudies == 5]
+
+Bias.values.total <- An.Cond[, .(FE = FE_Estimate - Rep_theta, REML = REML_Estimate - Rep_theta,
+                                 DL = DL_Estimate - Rep_theta, Moreno = Moreno_Estimate - Rep_theta),
+                             by = .(Rep_theta)]
+
+
+Bias.values.total2 <- melt(Bias.values.total, id = c("Rep_theta"))
+
+
+
+p10 <- ggplot(Bias.values.total2, aes(x = as.factor(Rep_theta), y = value, fill = variable)) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))
+p10
+
+p10 <- ggplot(Bias.values.total2, aes(x = Rep_theta, y = value, fill = variable, group = interaction(Rep_theta, variable) ) ) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))
+p10
+
+p10 <- ggplot(Bias.values.total2, aes(x = variable, y = value, fill = as.factor(Rep_theta))) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))
+p10
+
+p10 <- ggplot(Bias.values.total2, aes(x = Rep_theta, y = value, group = (as.factor(Rep_theta)))) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))+
+  facet_grid(. ~ variable)
+p10
+
+p10 <- ggplot(Bias.values.total2, aes(x = as.factor(Rep_theta), y = value)) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))+
+  facet_grid(. ~ variable)
+p10
+
+### By tau2 and theta
+
+#An.Cond <- Normal.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[1] & Rep_Subj == 4.2]
+An.Cond <- Normal.Sim.Results[Rep_Subj == 4.2 & Rep_NumStudies == 5]
+
+Bias.values.total <- An.Cond[, .(FE = FE_Estimate - Rep_theta, REML = REML_Estimate - Rep_theta,
+                                 DL = DL_Estimate - Rep_theta, Moreno = Moreno_Estimate - Rep_theta),
+                             by = .(Rep_theta, Rep_tau.sq)]
+
+
+Bias.values.total2 <- melt(Bias.values.total, id = c("Rep_theta", "Rep_tau.sq"))
+
+p10 <- ggplot(Bias.values.total2, aes(x = Rep_theta, y = value, group = (as.factor(Rep_theta)))) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))+
+  facet_grid(variable ~ Rep_tau.sq)
+p10
+
+p10 <- ggplot(Bias.values.total2, aes(x = Rep_tau.sq, y = value, group = (as.factor(Rep_tau.sq)))) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))+
+  facet_grid(Rep_theta ~ variable)
+p10
+
+p10 <- ggplot(Bias.values.total2, aes(x = as.factor(Rep_tau.sq), y = value)) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))+
+  facet_grid(Rep_theta ~ variable)
+p10
+
+p10 <- ggplot(Bias.values.total2, aes(x = Rep_theta, y = value, fill = variable, group = interaction(Rep_theta, variable) ) ) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA, coef = 0) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))+
+  facet_grid(.~ Rep_tau.sq)
+p10
+
+p10 <- ggplot(Bias.values.total2, aes(x = as.factor(Rep_theta), y = value, fill = variable ) ) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA, coef = 0) +
+  ggtitle("Bias") + xlab("Theta") + ylab("Bias")
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))+
+  facet_grid(.~ Rep_tau.sq)
+p10
+
+## By number of studies and tau2
+
+#An.Cond <- Normal.Sim.Results[Rep_theta == theta[3] & Rep_tau.sq == tau.sq[1] & Rep_Subj == 4.2]
+An.Cond <- Normal.Sim.Results[Rep_Subj == 4.2 & Rep_theta == theta[3]]
+
+Bias.values.total <- An.Cond[, .(FE = FE_Estimate - Rep_theta, REML = REML_Estimate - Rep_theta,
+                                 DL = DL_Estimate - Rep_theta, Moreno = Moreno_Estimate - Rep_theta),
+                             by = .(Rep_NumStudies, Rep_tau.sq)]
+
+
+Bias.values.total2 <- melt(Bias.values.total, id = c("Rep_NumStudies", "Rep_tau.sq"))
+
+p10 <- ggplot(Bias.values.total2, aes(x = as.factor(Rep_NumStudies), y = value, fill = variable ) ) +
+  #geom_boxplot(alpha=1, outlier.shape = NA, position=position_dodge(1)) +
+  geom_boxplot(alpha=1, outlier.shape = NA, coef = 0) +
+  ggtitle("Bias") +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.75,0.75))+
+  facet_grid(.~ Rep_tau.sq)
+p10

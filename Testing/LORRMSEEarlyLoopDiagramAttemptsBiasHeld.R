@@ -235,35 +235,30 @@ library(data.table)
 
 
 #### Easy access to values ----
-# UMD
+# LOR
 
-setwd("D:/Stats/AFP/Results/2019/UMD")
+setwd("D:/Stats/AFP/Results/2019/LOR")
 
 Subj <- c("None", "Step", "ModBegg", "Method", "AltOut", "Out")
 
 for(a in Subj){
 
-Sum_results2 <- data.table(read.csv("UMDResults_Looptest.csv"))
-Sum_results <- Sum_results2[, `:=` (Bias_FE = Bias_FE + Rep_theta,
-                                    Bias_REML = Bias_REML + Rep_theta,
-                                    Bias_DL = Bias_DL + Rep_theta,
-                                    Bias_Moreno = Bias_Moreno + Rep_theta)]
+Sum_results2 <- data.table(read.csv("LogORResults_Looped.csv"))
+Sum_results <- Sum_results2[, `:=` (RMSE_FE = sqrt(MSE_FE),
+                                    RMSE_REML = sqrt(MSE_REML),
+                                    RMSE_DL = sqrt(MSE_DL),
+                                    RMSE_Moreno = sqrt(MSE.Moreno))]
 
 Sum_results <- data.frame(Sum_results[Bias_type == a])
 
-#Sum_results$Bias_type <- ordered(Sum_results$Bias_type, levels = c("None", "Step", "ModBegg", "Method", "AltOut", "Out"))
-#Sum_results$Bias_typenum <- as.numeric(Sum_results$Bias_type)
-
-# Sum_results$Rep_Subj <- ordered(Sum_results$Rep_Subj, levels = c("Empirical", "Small", "Fixed at median", "Large"))
-# Sum_results$Rep_Subjenum <- as.numeric(Sum_results$Rep_Subj)
 
 nldata <- nestedloop(Sum_results,
-                     varnames=c("Rep_theta", "Rep_Subj", "Rep_tau.sq", "Rep_NumStudies"),
+                     varnames=c("Rep_NumStudies", "Rep_tau.sq", "Rep_Subj", "Rep_ev_freq", "Rep_theta"),
                      varlabels=
-                       c( "UMD",
-                         "Study size", "Heterogeneity",
-                         "Number of studies"),
-                     sign=c(1, 1, 1, 1))
+                       c("Number of studies",
+                         "Heterogeneity", "Study size", "Event Rate", "LOR"
+                         ),
+                     sign=c(1, 1, 1, 1, 1))
 
 ##
 ## R object pd2 is used in nested-loop plot (Figure 2)
@@ -276,22 +271,22 @@ pd2 <- nldata
 #                    levels=c(1,2,3,4,5,6),
 #                    labels=c("None", "Step", "ModBegg", "Method", "AltOut", "Out"))
 pd2$Rep_Subj <- factor(pd2$Rep_Subj,
-                  levels=c(4.2, 20, 60, 250),
-                  labels=c("Empirical", "Small", "Fixed at median", "Large"))
+                       levels=c(4.7, 20, 100, 250),
+                       labels=c("Empirical", "Small", "Fixed at median", "Large"))
 
 
-pdf(paste0("UMD_Bias_Plot_Bias_",a,".pdf"), paper="a4r", width=18, height=15)
+pdf(paste0("LOR_RMSE_Plot_Bias_",a,".pdf"), paper="a4r", width=18, height=15)
 ##
 par(pty="m")
 ##
 ## Create skeleton of nested-loop plot using standard R plot function
 ##
 plot(pd2$Rep_theta,
-     #log=c("y"), 
+     log=c("y"), 
      type="n",
-     ylim=c(-1.2, 1.2), bty="n",
-     xlab="5 x 4 x 4 x 6 = 480 ordered scenarios",
-     ylab="UMD",
+     ylim=c(0.001, 4), bty="n",
+     xlab="3 x 5 x 4 x 4 x 6 = 1440 ordered scenarios",
+     ylab="RMSE",
      las=1, xaxt="n")
 ##
 ## Add vertical lines (using R function lines.nestedloop)
@@ -301,7 +296,7 @@ lines(pd2, col=c("#BBBBBB", "#CCCCCC", "#DDDDDD", "#EEEEEE"))
 ## Add reference lines (using R function lines.nestedloop)
 ##
 lines(pd2, which="r",
-      ymin.refline=0.8, ymax.refline=1.25,
+      ymin.refline=0.001, ymax.refline=0.008,
       cex.ref=0.7)
 
 ### Adding alpha
@@ -317,29 +312,128 @@ add.alpha <- function(col, alpha=1){
           rgb(x[1], x[2], x[3], alpha=alpha))  
 }
 
-colour2 <- add.alpha(c("black", colour1), 1)
+colour2 <- add.alpha(colour1, 1)
 
 ##
 ## Estimates and legend (using standard R functions lines and legend)
 ##
-lines(pd2$Rep_theta, col=colour2[1], lwd=2, type="s")   # True theta
-lines(pd2$Bias_FE, col=colour2[2], type="s")    # Peto
-lines(pd2$Bias_DL, col=colour2[3], type="s")   # Trimfill
-lines(pd2$Bias_REML, col=colour2[4], type="s")      # Peters
-lines(pd2$Bias_Moreno, col=colour2[5], type="s")           # Limit meta-analysis, method 1
+#lines(y=0, col="black", lwd=2, type="s")   # True theta
+lines(pd2$RMSE_FE, col=colour2[1], type="s", lwd = 0.8)    # Peto
+lines(pd2$RMSE_DL, col=colour2[2], type="s", lwd = 0.8)   # Trimfill
+lines(pd2$RMSE_REML, col=colour2[3], type="s", lwd = 0.8)      # Peters
+lines(pd2$RMSE_Moreno, col=colour2[4], type="s", lwd = 0.8)           # Limit meta-analysis, method 1
 #lines(pd2$exp.LimF, col="violet", type="s")      # Limit meta-analysis, method 2
 #lines(pd2$exp.expect, col="gold", type="s")      # Limit meta-analysis, method 3
 ##
-legend(1, 0.55,
+legend(100, 0.028,
        lwd=c(2, rep(1, 6)),
-       col=c(colour2),
+       col=c(colour1),
        cex=0.9,
        bty="n",
-       c("True theta", "FE", "DL", "REML", "Moreno"))
+       c("FE", "DL", "REML", "Moreno"))
 ##
 dev.off()
 
 }
+
+
+###  Simplier diagram 
+
+for(a in Subj){
+
+Sum_results2 <- data.table(read.csv("LogORResults_Looped.csv"))
+Sum_results <- Sum_results2[, `:=` (RMSE_FE = sqrt(MSE_FE),
+                                    RMSE_REML = sqrt(MSE_REML),
+                                    RMSE_DL = sqrt(MSE_DL),
+                                    RMSE_Moreno = sqrt(MSE.Moreno))]
+
+Sum_results <- data.frame(Sum_results[Bias_type == a & Rep_ev_freq == 0.3])
+
+
+nldata <- nestedloop(Sum_results,
+                     varnames=c("Rep_NumStudies", "Rep_tau.sq", "Rep_Subj", "Rep_theta"),
+                     varlabels=
+                       c("Number of studies",
+                         "Heterogeneity", "Study size", "LOR"
+                       ),
+                     sign=c(1, 1, 1, 1, 1))
+
+##
+## R object pd2 is used in nested-loop plot (Figure 2)
+##
+pd2 <- nldata
+##
+## Use labels instead of numeric values for rho2 and p.c
+##
+# pd2$rho2 <- factor(pd2$Bias_typenum,
+#                    levels=c(1,2,3,4,5,6),
+#                    labels=c("None", "Step", "ModBegg", "Method", "AltOut", "Out"))
+pd2$Rep_Subj <- factor(pd2$Rep_Subj,
+                       levels=c(4.7, 20, 100, 250),
+                       labels=c("Empirical", "Small", "Fixed at median", "Large"))
+
+
+pdf(paste0(" ER0_3 LOR_RMSE_Plot_Bias_",a,".pdf"), paper="a4r", width=18, height=15)
+##
+par(pty="m")
+##
+## Create skeleton of nested-loop plot using standard R plot function
+##
+plot(pd2$Rep_theta,
+     log=c("y"), 
+     type="n",
+     ylim=c(0.001, 4), bty="n",
+     xlab="3 x 5 x 4 x 4 x 6 = 1440 ordered scenarios",
+     ylab="RMSE",
+     las=1, xaxt="n")
+##
+## Add vertical lines (using R function lines.nestedloop)
+##
+lines(pd2, col=c("#BBBBBB", "#CCCCCC", "#DDDDDD", "#EEEEEE"))
+##
+## Add reference lines (using R function lines.nestedloop)
+##
+lines(pd2, which="r",
+      ymin.refline=0.001, ymax.refline=0.008,
+      cex.ref=0.7)
+
+### Adding alpha
+library(RColorBrewer)
+
+colour1 <- brewer.pal(4, "Dark2")
+
+add.alpha <- function(col, alpha=1){
+  if(missing(col))
+    stop("Please provide a vector of colours.")
+  apply(sapply(col, col2rgb)/255, 2, 
+        function(x) 
+          rgb(x[1], x[2], x[3], alpha=alpha))  
+}
+
+colour2 <- add.alpha(colour1, 1)
+
+##
+## Estimates and legend (using standard R functions lines and legend)
+##
+#lines(y=0, col="black", lwd=2, type="s")   # True theta
+lines(pd2$RMSE_FE, col=colour2[1], type="s", lwd = 0.8)    # Peto
+lines(pd2$RMSE_DL, col=colour2[2], type="s", lwd = 0.8)   # Trimfill
+lines(pd2$RMSE_REML, col=colour2[3], type="s", lwd = 0.8)      # Peters
+lines(pd2$RMSE_Moreno, col=colour2[4], type="s", lwd = 0.8)           # Limit meta-analysis, method 1
+#lines(pd2$exp.LimF, col="violet", type="s")      # Limit meta-analysis, method 2
+#lines(pd2$exp.expect, col="gold", type="s")      # Limit meta-analysis, method 3
+##
+legend(100, 0.028,
+       lwd=c(2, rep(1, 6)),
+       col=c(colour1),
+       cex=0.9,
+       bty="n",
+       c("FE", "DL", "REML", "Moreno"))
+##
+dev.off()
+
+}
+
 
 
 ## Reorder dataset with simulation results according to

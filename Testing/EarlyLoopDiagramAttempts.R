@@ -1,3 +1,6 @@
+### Remove previous variables
+rm(list = ls())
+
 nestedloop <- function(x,
                        varnames, sign=rep(1, length(varnames)),
                        varlabels=NULL){
@@ -265,12 +268,12 @@ pd2 <- nldata
 ##
 ## Use labels instead of numeric values for rho2 and p.c
 ##
-pd2$rho2 <- factor(pd2$Bias_typenum,
-                   levels=c(1,2,3,4,5,6),
-                   labels=c("None", "Step", "ModBegg", "Method", "AltOut", "Out"))
-pd2$p.c <- factor(pd2$Rep_Subj,
-                  levels=c(4.2, 20, 60, 250),
-                  labels=c("Empirical", "Small", "Fixed at median", "Large"))
+# pd2$Bias_typenum <- factor(pd2$Bias_typenum,
+#                    levels=c(1,2,3,4,5,6),
+#                    labels=c("None", "Step", "ModBegg", "Method", "AltOut", "Out"))
+pd2$Rep_Subj <- factor(pd2$Rep_Subj,
+                       levels=c(4.2, 20, 60, 250),
+                       labels=c("Empirical", "Small", "Fixed at median", "Large"))
 
 
 pdf("Figure2.pdf", paper="a4r", width=18, height=15)
@@ -283,8 +286,8 @@ plot(pd2$Bias_typenum,
      #log=c("y"), 
      type="n",
      ylim=c(-1.2, 1.2), bty="n",
-     xlab="4 x 4 x 4 x 4 x 3 = 768 ordered scenarios",
-     ylab="Bias type",
+     xlab="5 x 4 x 4 x 6 = 480 ordered scenarios",
+     ylab="UMD",
      las=1, xaxt="n")
 ##
 ## Add vertical lines (using R function lines.nestedloop)
@@ -296,24 +299,39 @@ lines(pd2, col=c("#BBBBBB", "#CCCCCC", "#DDDDDD", "#EEEEEE"))
 lines(pd2, which="r",
       ymin.refline=0.8, ymax.refline=1.2,
       cex.ref=0.7)
+
+### Adding alpha
+library(RColorBrewer)
+
+colour1 <- brewer.pal(4, "Dark2")
+
+add.alpha <- function(col, alpha=1){
+  if(missing(col))
+    stop("Please provide a vector of colours.")
+  apply(sapply(col, col2rgb)/255, 2, 
+        function(x) 
+          rgb(x[1], x[2], x[3], alpha=alpha))  
+}
+
+colour2 <- add.alpha(c("black", colour1), 1)
+
 ##
 ## Estimates and legend (using standard R functions lines and legend)
 ##
-lines(pd2$Rep_theta, col="black", lwd=2, type="s")   # True theta
-lines(pd2$Bias_FE, col="darkgray", type="s")    # Peto
-lines(pd2$Bias_DL, col="green", type="s")   # Trimfill
-lines(pd2$Bias_REML, col="blue", type="s")      # Peters
-lines(pd2$Bias_Moreno, col="red", type="s")           # Limit meta-analysis, method 1
+lines(pd2$Rep_theta, col=colour2[1], lwd=2, type="s")   # True theta
+lines(pd2$Bias_FE, col=colour2[2], type="s")    # Peto
+lines(pd2$Bias_DL, col=colour2[3], type="s")   # Trimfill
+lines(pd2$Bias_REML, col=colour2[4], type="s")      # Peters
+lines(pd2$Bias_Moreno, col=colour2[5], type="s")           # Limit meta-analysis, method 1
 #lines(pd2$exp.LimF, col="violet", type="s")      # Limit meta-analysis, method 2
 #lines(pd2$exp.expect, col="gold", type="s")      # Limit meta-analysis, method 3
 ##
 legend(1, 0.55,
        lwd=c(2, rep(1, 6)),
-       col=c("black", "darkgray", "green",
-             "blue", "red"),
+       col=c(colour2),
        cex=0.9,
        bty="n",
-       c("True theta", "FE Bias", "DL Bias", "REML Bias", "Moreno Bias"))
+       c("True theta", "FE", "DL", "REML", "Moreno"))
 ##
 dev.off()
 
@@ -326,10 +344,10 @@ dev.off()
 ## Simulation parameters theta, p.c and k are sorted in
 ## decreasing order (see argument sign).
 ##
-nldata <- nestedloop(res,
-                     varnames=c("theta", "rho2", "p.c", "tau2", "k"),
-                     varlabels=
-                       c("Odds ratio", "Selection",
-                         "Control event proportion", "Heterogeneity",
-                         "Number of studies"),
-                     sign=c(-1, 1, -1, 1, -1))
+# nldata <- nestedloop(res,
+#                      varnames=c("theta", "rho2", "p.c", "tau2", "k"),
+#                      varlabels=
+#                        c("Odds ratio", "Selection",
+#                          "Control event proportion", "Heterogeneity",
+#                          "Number of studies"),
+#                      sign=c(-1, 1, -1, 1, -1))

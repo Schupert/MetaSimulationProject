@@ -239,7 +239,10 @@ library(data.table)
 
 setwd("D:/Stats/AFP/Results/2019/UMD")
 
-#Sum_results <- data.frame(read.csv("UMDResults_Looptest.csv"))
+Subj <- c("None", "Step", "ModBegg", "Method", "AltOut", "Out")
+
+for(a in Subj){
+  
 
 Sum_results2 <- data.table(read.csv("UMDResults_Looptest.csv"))
 # Sum_results <- Sum_results2[, `:=` (Bias_FE = Bias_FE + Rep_theta,
@@ -258,15 +261,15 @@ Sum_results <- Sum_results2[, `:=` (RMSE_FE = sqrt(MSE_FE),
                                     RMSE_DL = sqrt(MSE_DL),
                                     RMSE_Moreno = sqrt(MSE.Moreno))]
 
-Sum_results <- data.frame(Sum_results[Bias_type == "Step"])
+Sum_results <- data.frame(Sum_results[Bias_type == a])
 
 
 nldata <- nestedloop(Sum_results,
-                     varnames=c("Rep_theta", "Rep_Subj", "Rep_tau.sq", "Rep_NumStudies"),
+                     varnames=c("Rep_NumStudies", "Rep_tau.sq", "Rep_Subj", "Rep_theta"),
                      varlabels=
-                       c( "UMD",
-                          "Study size", "Heterogeneity",
-                          "Number of studies"),
+                       c( "Number of studies",
+                          "Heterogeneity", "Study size",
+                          "UMD"),
                      sign=c(1, 1, 1, 1))
 
 ##
@@ -279,12 +282,12 @@ pd2 <- nldata
 # pd2$rho2 <- factor(pd2$Bias_typenum,
 #                    levels=c(1,2,3,4,5,6),
 #                    labels=c("None", "Step", "ModBegg", "Method", "AltOut", "Out"))
-pd2$p.c <- factor(pd2$Rep_Subj,
+pd2$Rep_Subj <- factor(pd2$Rep_Subj,
                   levels=c(4.2, 20, 60, 250),
                   labels=c("Empirical", "Small", "Fixed at median", "Large"))
 
 
-pdf("Figure6.pdf", paper="a4r", width=18, height=15)
+pdf(paste0("UMD_RMSE_Plot_Bias_",a,".pdf"), paper="a4r", width=18, height=15)
 ##
 par(pty="m")
 ##
@@ -294,8 +297,8 @@ plot(pd2$Rep_theta,
      log=c("y"), 
      type="n",
      ylim=c(0.001, 4), bty="n",
-     xlab="4 x 4 x 4 x 4 x 3 = 768 ordered scenarios",
-     ylab="Bias type",
+     xlab="5 x 4 x 4 x 6 = 480 ordered scenarios",
+     ylab="RMSE",
      las=1, xaxt="n")
 ##
 ## Add vertical lines (using R function lines.nestedloop)
@@ -305,7 +308,7 @@ lines(pd2, col=c("#BBBBBB", "#CCCCCC", "#DDDDDD", "#EEEEEE"))
 ## Add reference lines (using R function lines.nestedloop)
 ##
 lines(pd2, which="r",
-      ymin.refline=0.001, ymax.refline=0.01,
+      ymin.refline=0.001, ymax.refline=0.008,
       cex.ref=0.7)
 
 ### Adding alpha
@@ -334,16 +337,16 @@ lines(pd2$RMSE_Moreno, col=colour2[4], type="s")           # Limit meta-analysis
 #lines(pd2$exp.LimF, col="violet", type="s")      # Limit meta-analysis, method 2
 #lines(pd2$exp.expect, col="gold", type="s")      # Limit meta-analysis, method 3
 ##
-legend(1, 0.55,
+legend(100, 0.028,
        lwd=c(2, rep(1, 6)),
        col=c(colour1),
        cex=0.9,
        bty="n",
-       c("FE Bias", "DL Bias", "REML Bias", "Moreno Bias"))
+       c("FE", "DL", "REML", "Moreno"))
 ##
 dev.off()
 
-
+}
 
 
 ## Reorder dataset with simulation results according to

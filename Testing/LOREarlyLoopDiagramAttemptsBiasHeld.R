@@ -235,15 +235,15 @@ library(data.table)
 
 
 #### Easy access to values ----
-# UMD
+# LOR
 
-setwd("D:/Stats/AFP/Results/2019/UMD")
+setwd("D:/Stats/AFP/Results/2019/LOR")
 
 Subj <- c("None", "Step", "ModBegg", "Method", "AltOut", "Out")
 
 for(a in Subj){
 
-Sum_results2 <- data.table(read.csv("UMDResults_Looptest.csv"))
+Sum_results2 <- data.table(read.csv("LogORResults_Looped.csv"))
 Sum_results <- Sum_results2[, `:=` (Bias_FE = Bias_FE + Rep_theta,
                                     Bias_REML = Bias_REML + Rep_theta,
                                     Bias_DL = Bias_DL + Rep_theta,
@@ -258,11 +258,11 @@ Sum_results <- data.frame(Sum_results[Bias_type == a])
 # Sum_results$Rep_Subjenum <- as.numeric(Sum_results$Rep_Subj)
 
 nldata <- nestedloop(Sum_results,
-                     varnames=c("Rep_theta", "Rep_Subj", "Rep_tau.sq", "Rep_NumStudies"),
+                     varnames=c("Rep_ev_freq", "Rep_theta", "Rep_Subj", "Rep_tau.sq", "Rep_NumStudies"),
                      varlabels=
-                       c( "UMD",
-                         "Study size", "Heterogeneity",
-                         "Number of studies"),
+                       c("Event Rate", "LOR",
+                          "Study size", "Heterogeneity",
+                          "Number of studies"),
                      sign=c(1, 1, 1, 1))
 
 ##
@@ -276,11 +276,11 @@ pd2 <- nldata
 #                    levels=c(1,2,3,4,5,6),
 #                    labels=c("None", "Step", "ModBegg", "Method", "AltOut", "Out"))
 pd2$Rep_Subj <- factor(pd2$Rep_Subj,
-                  levels=c(4.2, 20, 60, 250),
-                  labels=c("Empirical", "Small", "Fixed at median", "Large"))
+                       levels=c(4.7, 20, 100, 250),
+                       labels=c("Empirical", "Small", "Fixed at median", "Large"))
 
 
-pdf(paste0("UMD_Bias_Plot_Bias_",a,".pdf"), paper="a4r", width=18, height=15)
+pdf(paste0("LOR_Bias_Plot_Bias_",a,".pdf"), paper="a4r", width=18, height=15)
 ##
 par(pty="m")
 ##
@@ -289,9 +289,9 @@ par(pty="m")
 plot(pd2$Rep_theta,
      #log=c("y"), 
      type="n",
-     ylim=c(-1.2, 1.2), bty="n",
-     xlab="5 x 4 x 4 x 6 = 480 ordered scenarios",
-     ylab="UMD",
+     ylim=c(-1.8, 1.8), bty="n",
+     xlab="3 x 5 x 4 x 4 x 6 = 1440 ordered scenarios",
+     ylab="LOR",
      las=1, xaxt="n")
 ##
 ## Add vertical lines (using R function lines.nestedloop)
@@ -301,7 +301,7 @@ lines(pd2, col=c("#BBBBBB", "#CCCCCC", "#DDDDDD", "#EEEEEE"))
 ## Add reference lines (using R function lines.nestedloop)
 ##
 lines(pd2, which="r",
-      ymin.refline=0.8, ymax.refline=1.25,
+      ymin.refline=1.4, ymax.refline=1.93,
       cex.ref=0.7)
 
 ### Adding alpha
@@ -330,7 +330,7 @@ lines(pd2$Bias_Moreno, col=colour2[5], type="s")           # Limit meta-analysis
 #lines(pd2$exp.LimF, col="violet", type="s")      # Limit meta-analysis, method 2
 #lines(pd2$exp.expect, col="gold", type="s")      # Limit meta-analysis, method 3
 ##
-legend(1, 0.55,
+legend(1, 1,
        lwd=c(2, rep(1, 6)),
        col=c(colour2),
        cex=0.9,
